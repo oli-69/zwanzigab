@@ -1,0 +1,120 @@
+<html>
+    <head>
+        <title>Zwanzig Ab Online</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0"> 
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <meta name="apple-mobile-web-app-title" content="Zwanzig Ab">
+
+        <link rel="apple-touch-icon" sizes="57x57" href="/ico/apple-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="/ico/apple-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="/ico/apple-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="/ico/apple-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="/ico/apple-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="/ico/apple-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="/ico/apple-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/ico/apple-icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/ico/apple-icon-180x180.png">
+        <link rel="icon" type="image/png" sizes="192x192"  href="/ico/android-icon-192x192.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/ico/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="96x96" href="/ico/favicon-96x96.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/ico/favicon-16x16.png">
+        <link rel="manifest" href="/ico/manifest.json">
+        <meta name="msapplication-TileColor" content="#ffffff">
+        <meta name="msapplication-TileImage" content="/ico/ms-icon-144x144.png">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="stylesheet" type="text/css" href="ui.css"/>
+        <link rel="stylesheet" type="text/css" href="ui-login.css"/>
+        <script src="jquery-3.5.1.min.js"></script>
+        <script src="jquery-ui.min.js"></script>
+        <script src="audio.js"></script>
+        <script src="cards-png.js"></script>
+        <script src="game.js"></script>
+        <script src="zwanzigab.js"></script>
+    </head>
+    <body>
+        <main>
+            <div id="gamePage">
+                <div id="attendeesPanel"></div>
+                <div id="gameDesk"><div id="gameStack" class="cardStack"></div></div>
+                <div id="playerListPanel"></div>
+                <div id="bottomPanel">
+                    <span id="bottomPanelMessage"></span><br>
+                    <div id="chatContainer">
+                        <div id="chatContainerLeft">
+                            <div id="chatArea"></div>                
+                            <input type="text" id="chatMessage" placeholder="Nachricht hier eingeben..."/>
+                        </div>
+                        <div id="chatContainerRight">
+                            <div id="webradio"><input type="range" id="webRadioSlider" onchange="radioVolumeChanged()" value="20"><div id="webRadioBtn" onClick="toogleWebRadio()"></div></div>
+                            <input type="button" id="videoBtn" value="Video" onclick="openVideo()" />
+                            <input type="button" id="chatBtn" value="Send" onclick="sendChatMessage()" />
+                            <input type="button" id="logoffBtn" value="Logout" onclick="logoff()" disabled hidden />
+                        </div>
+                    </div>
+                </div>
+                <div id="joinInOutDialog">
+                    <div>Neues Spiel. Warte auf Mitspieler...</div><br>
+                    <input type="button" class="dialogButton" id="addToAttendeesBtn" value="Mitspielen" onclick="addToAttendees()" />
+                    <input type="button" class="dialogButton" id="removeFromAttendeesBtn" value="Nicht Mitspielen" onclick="removeFromAttendees()" />
+                    <input type="button" class="dialogButton" id="startGameBtn" value="Los gehts!" onclick="startGame()" />
+                </div>
+                <div id="dealCardsDialog">
+                    <div>Karten werden gemischt...</div><br>
+                    <input type="button" class="dialogButton" id="startDealingBtn" value="Starte ausgeben!" onclick="startDealing()" />
+                </div>
+            </div>
+
+            <div id="loginPage">
+                <div id="loginDialog">
+                    <img src="title.png">
+                    <table>
+                        <tr> 
+                            <td>Name:</td><td><input type="text" id="pName" value=""/></td>
+                        </tr>
+                        <tr> 
+                            <td>Password:</td><td><input type="password" id="pPwd" value=""/></td>
+                        </tr>
+                        <tr> 
+                            <td colspan="2" id="loginConsole">&nbsp;</td>
+                        </tr>
+                        <tr> 
+                            <td colspan="2">
+                                <div id="loginOptionsArea">
+                                    <div id="loginOptionGame" class="loginOption"><img id="loginImageGame" src="login-game.png" onClick="selectLoginOptionsSwitch(false)"><br>Spiel</div>
+                                    <label class="loginSwitch">
+                                        <input type="checkbox" id="loginOptionsSwitch">
+                                        <span class="loginSlider round"></span>
+                                    </label>
+                                    <div id="loginOptionVideo" class="loginOption"><img id="loginImageVideo" src="login-video-bw.png" onClick="selectLoginOptionsSwitch(true)"><br>Videoraum</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr> 
+                            <td colspan="2" style="text-align: center;"><input type="button" id="connectBtn" value="Anmelden" onclick="login()" disabled /></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </main>
+        <script>
+            $(document).ready(function () {
+                onDocumentReady();
+                $("#pName").val("testUser");
+                $("#pPwd").val("123456");
+//                login();
+//                if (!true) {
+//                    setLoginPageVisible(false);
+//                    myName = "Player 1";
+////                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}, {name: "Player 5"}];
+//                    players = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
+//                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
+//                    allAttendees = [0, 1, 2, 3];
+//                    updateAttendeeList();
+//                }
+            });
+        </script>
+    </body>
+</html>

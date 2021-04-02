@@ -1,16 +1,13 @@
 package zwanzigab;
 
+import cardgame.GameServer;
+import cardgame.ui.GameFrame;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
 import javax.swing.SwingUtilities;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.core.config.DefaultConfiguration;
 import org.eclipse.jetty.http.pathmap.ServletPathSpec;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -23,18 +20,13 @@ import org.eclipse.jetty.websocket.server.WebSocketUpgradeFilter;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
-import zwanzigab.ui.ZwanzigAbFrame;
+import zwanzigab.ui.ZwanzigAbGamePanel;
 
 /**
  * This class represents the ZwanzigAbServer. It implements the static main
  * entry point to start the application.
  */
-public class ZwanzigAbServer {
-
-    static {
-        Configurator.initialize(new DefaultConfiguration());
-        Configurator.setRootLevel(Level.DEBUG);
-    }
+public class ZwanzigAbServer extends GameServer {
 
     private static final Logger LOGGER = LogManager.getLogger(ZwanzigAbServer.class);
 
@@ -66,7 +58,7 @@ public class ZwanzigAbServer {
         LOGGER.info("using port " + port);
         String confName = settings.getProperty("jitsiConference");
         LOGGER.info("using conference name '" + confName + "'");
-        ZwanzigAbGame game = new ZwanzigAbGame(confName);
+        ZwanzigAbGame game = new ZwanzigAbGame(confName, getWebradioList(settings));
         Server httpServer = new Server(port);
 
         ServletContextHandler context = new ServletContextHandler();
@@ -104,15 +96,7 @@ public class ZwanzigAbServer {
         game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "true")));
         if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
             installLookAndFeel();
-            SwingUtilities.invokeLater(() -> new ZwanzigAbFrame(game).setVisible(true));
-        }
-    }
-
-    private static void installLookAndFeel() {
-        try {
-            javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-            LOGGER.error(ex);
+            SwingUtilities.invokeLater(() -> new GameFrame( new ZwanzigAbGamePanel(game)).setVisible(true));
         }
     }
 
@@ -129,32 +113,6 @@ public class ZwanzigAbServer {
         @Override
         public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse resp) {
             return new ZwanzigAbSocket(game, configPath);
-        }
-    }
-
-    private static final class PingWatchdog {
-
-        private final ZwanzigAbGame game;
-        private final long interval = 1000 * 60 * 3;
-        private final Timer timer;
-
-        public PingWatchdog(ZwanzigAbGame game) {
-            this.game = game;
-            timer = new Timer("ServerWatchdog");
-        }
-
-        public void start() {
-            timer.schedule(getTask(), interval);
-        }
-
-        private TimerTask getTask() {
-            return new TimerTask() {
-                @Override
-                public void run() {
-                    game.sendPing();
-                    timer.schedule(getTask(), interval);
-                }
-            };
         }
     }
 }

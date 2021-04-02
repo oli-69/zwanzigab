@@ -1,0 +1,363 @@
+
+/* Mobile first  */  
+body{
+    font-family: arial, helvetica, sans-serif;
+    font-size: 0.8em;
+}
+
+main {
+}
+
+#controlPanel{
+    position: fixed;
+    background-color: rgba(255,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.5em;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    border-color: darkgray;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+}
+
+#bottomPanel{
+    text-align: center;
+    background-color: rgba(0,0,0,0.4);
+    min-width: 100%;
+    left: 0px;
+    bottom:0px;
+    position: fixed;
+    padding: 0.2em;
+}
+
+#bottomPanelMessage{    
+    font-size: 1.3em;
+    color: white;
+}
+#chatContainer{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 0.25em;
+}
+#chatContainerLeft{
+    display: flex;
+    flex-direction: column;
+    width:100%;
+}
+#chatContainerRight{
+    display: flex;
+    flex-direction: column;
+    margin-right: 1em;        
+}
+
+#chatArea{
+    font-family: arial, helvetica, sans-serif;
+    font-size: 0.8em;
+    text-align: left;
+    right:1em;
+    height: 3em;
+    border-radius: 5px;
+    border: darkgray 1px solid;
+    background-color: black;
+    color: white;
+    margin: 0.5em;
+    overflow: auto;
+    padding: 0.5em;
+}
+.chatMsgSender{
+    font-weight: bold;
+    color: white;
+}
+.chatMsgTxt{
+    color: silver;
+}
+#chatMessage {
+    border-radius: 5px;
+    border: darkgray 1px solid;
+    margin-top: 0;
+    margin-right: 0.5em;
+    margin-left: 0.5em;
+    flex-grow: 1;
+}
+
+#webradio{
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    flex-grow: 1;
+    background-color: rgba(224, 224, 224, 0.2);
+    border-radius: 15px;
+    margin: 0.4em;
+}
+
+#webRadioSlider{
+    width: 6em;
+    opacity: 0.7;
+}
+
+#webRadioBtn{
+    width: 24px;
+    min-height:24px;
+    background-image: url('wr-start-24.png');
+    background-position-y: center;
+    background-repeat: no-repeat;
+    margin-right: 0.25em;
+    margin-left: 0.5em;
+    opacity: 0.7;
+}
+#webRadioBtn:hover, #webRadioSlider:hover{
+    opacity: 1;
+}
+#webRadioBtn:active{
+    opacity: 0.5;    
+}
+#attendeesPanel{
+    position: fixed;
+    background-image: url('./wood-small.jpg');
+    background-color: #27221f;
+    background-size: cover;
+    min-width: 100%;
+    min-height: 100%;
+    top: 0px;
+    left: 0px;
+}
+
+#gameDesk{
+    position: absolute;
+    /*background-color: rgba(255,255,0,1.0);*/ 
+    padding: 0.25em;
+    display: flex;
+    flex-direction: column;
+    width:14.7em;
+}
+
+.attendeeDesk, .moverDesk{
+    position: absolute;
+    color: white;
+    font-weight: bold;
+    background-color: rgba(17,12,12,0.4);
+    border-color: rgba(17,12,12,0.5);
+    border-style: solid;
+    border-width: 1px;
+    border-radius:  0.5em;
+    padding: 0.25em;
+    display: flex;
+    flex-direction: column;
+    width:11em;
+}
+.moverDesk{
+    background-color: rgba(255,255,0,0.1);
+    border-color: rgba(255,255,128,0.75);
+}
+.cardStack {
+    /*background-color: rgba(255,0,0, 0.5);*/
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    min-height: 8.1em;
+}
+
+/* ratio: 1,446428571428571*/
+.card {
+    width: 4.75em;
+    height: 6.8705em;
+}
+
+.attendeeNameContainer {
+    bottom:0px;
+    width: 100%;
+    flex-grow: 0;
+    display: flex;
+    flex-direction: row;
+}
+.attendeeName{
+    font-style: italic;
+    text-align: center;
+    flex-grow: 1;
+}
+.cardViewerName{
+    color: silver;
+    font-weight: lighter;
+    font-size: 0.6em;
+    font-style:normal;
+    width: 100%;
+    text-align: left;
+
+}
+
+#playerListPanel{
+    display: flex;
+    justify-content: center;
+    background-color: rgba(0,0,0,0.4);
+    min-width: 100%;
+    top: 0px;
+    left: 0px;
+    position: fixed;
+}
+.playerOffline {
+    color: darkgray;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+    text-align: center;
+}
+
+.playerOnline {
+    color: white;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+    text-align: center;
+}
+
+#joinInOutDialog, #dealCardsDialog{
+    text-align: center;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    border-color: darkgray;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    display: block;
+    position: fixed;
+    min-width: 50%;
+    top: 11em;
+    left: 50%;
+    transform: translate(-50%, 0);
+    padding: 1em;
+}
+
+.dialogButton{
+    margin-top: 0.5em;
+}
+
+#gamePage{
+    display: block;
+}
+
+#loginPage{
+    display: flex;
+    position: fixed;
+    min-height: 100%; 
+    min-width: 100%; 
+    top:0;
+    left:0;
+    background-color: white;
+}
+
+#loginDialog{
+    display: block;
+    text-align: center;
+    background-color: lightgray;
+    border-radius: 5px;
+    border-color: black;
+    border-style: solid;
+    border-width: 1px;
+    height: auto;
+    min-height: 0px;
+    margin: auto;
+    margin-top: 100px;
+    padding: 1em;
+}
+
+#loginDialog input{
+    font-size: 1em;
+}
+
+#loginConsole {
+    font-size: 0.6em;
+    text-align: center;
+}
+
+/* Smart Phones und Tablets mit mittlerer Auflösung */
+@media all and (min-width: 50em) {
+    body {
+        font-size: 0.9em;
+    }
+    #playerListPanel, #bottomPanel{
+        background-color: rgba(0,0,0,0.5);
+    }
+    #attendeesPanel{
+        background-image: url('./wood-med.jpg');
+    }
+    #chatContainerLeft{
+        max-width:40em;
+    }
+    #chatContainerRight{
+        margin-bottom: 0em;        
+    }
+    .cardStack {
+        min-height: 10.3em;
+    }
+    /* ratio: 1,446428571428571*/
+    .card {
+        width: 6em;
+        height: 8.678em;
+    }
+    #gameDesk{
+        width:18.5em;
+    }
+
+    .attendeeDesk, .moverDesk{
+        width:13.75em;
+    }
+    .attendeeName{
+        margin-top: 0.5em;
+    }
+    #bottomPanelMessage{    
+        margin-bottom: 3em;
+    }
+    #chatArea{
+        font-size: 0.9em;
+        height: 5em;
+    }
+    #bottomPanel{
+        padding: 0.4em;
+    }
+    #joinInOutDialog, #dealCardsDialog{
+        background-color: rgba(0,0,0,0.75);
+        font-size: 1.3em;
+    }
+}
+
+/* Viewports mit großer Auflösung */
+@media all and (min-width: 70em) {
+    body {
+        font-size: 1em;
+    }
+
+    #logoffBtn, #chatBtn, #videoBtn{
+    }
+
+    .cardStack {
+        min-height: 10.1em;
+    }
+    /* ratio: 1,446428571428571*/
+    .card {
+        width: 6.5em;
+        height: 9.402em;
+    }
+    #gameDesk{
+        width:20.2em;
+    }
+
+    .attendeeDesk, .moverDesk{
+        width:14.95em;
+    }
+    .attendeeName{
+        margin-top: 1em;
+    }
+    #bottomPanel{
+        padding: 0.6em;
+    }
+    #joinInOutDialog, #dealCardsDialog{
+        font-size: 1.6em;
+    }
+
+}

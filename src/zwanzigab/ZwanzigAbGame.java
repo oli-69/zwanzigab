@@ -1,18 +1,28 @@
 package zwanzigab;
 
+import cardgame.Card;
 import cardgame.CardGame;
-import static cardgame.CardGame.CARDS_32;
-import com.google.gson.Gson;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
+import static cardgame.CardGame.PROP_ATTENDEESLIST;
+import cardgame.Player;
+import cardgame.SocketMessage;
+import cardgame.messages.PlayerStack;
+import cardgame.messages.WebradioUrl;
+import com.google.gson.JsonArray;
+import java.awt.Image;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import javax.swing.ImageIcon;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import zwanzigab.messages.ChatMessage;
+import zwanzigab.messages.BuyResult;
 import zwanzigab.messages.GameStateMessage;
+import zwanzigab.messages.MoveResult;
+import zwanzigab.messages.SortedStack;
+import zwanzigab.messages.Trump;
 
 /**
  * This class implements the game rules and evaluates the player's decisions.
@@ -20,6 +30,16 @@ import zwanzigab.messages.GameStateMessage;
 public class ZwanzigAbGame extends CardGame {
 
     private static final Logger LOGGER = LogManager.getLogger(ZwanzigAbGame.class);
+    private static final String GAME_NAME = "Zwanzig Ab Server";
+    private static final Image GAME_ICON = new ImageIcon(ZwanzigAbGame.class.getResource("favicon-32x32.png")).getImage();
+
+    private final CardDealService cardDealService;
+    private final Round round;
+    private final CardComparator cardComparator;
+
+    private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
+    private Player gameStartDealer = null;
+    private int gameCounter = 0;
 
     /**
      * Enumeration of the game phases.
@@ -29,237 +49,90 @@ public class ZwanzigAbGame extends CardGame {
          * The game didn's start yet. Player's can choose to attend the next
          * round, or not.
          */
-        waitForAttendees
+        waitForAttendees,
+        /**
+         * The card dealer is shuffling. The player next to the dealer ends this
+         * phase by choosing/denying hart blind.
+         */
+        shuffle,
+        /**
+         * The card dealer dispenses the first three cards.
+         */
+        deal3cards,
+        /**
+         * The card dealer dispenses the last two cards after the player defined
+         * the trump color.
+         */
+        deal2cards,
+        /**
+         * The player wants "herz-blind" for trump. Deal all 5 cards at once.
+         */
+        deal5cards,
+        /**
+         * The players buy new cards or decide to suspend.
+         */
+        buy,
+        /**
+         * Game is waiting for next player move.
+         */
+        waitForPlayerMove,
+        /**
+         * Game is over. One or more players have reached zero points (game
+         * tokens).
+         */
+        gameOver
     };
 
     /**
-     * Enumeration of the available player moves.
+     * Default Constructor. Creates an instance of this class.
      */
-    public static enum MOVE {
-    };
-
-    public static final String PROP_GAMEPHASE = "gameState";
-    public static final String PROP_ATTENDEESLIST = "attendeesList";
-    public static final String PROP_PLAYERLIST = "playerList";
-    public static final String PROP_PLAYER_ONLINE = "playerOnline";
-    public static final String PROP_WEBRADIO_PLAYING = "webradioPlaying";
-
-    private final PlayerIdComparator playerIdComparator;
-    private final List<ZwanzigAbPlayer> players; // List of all players in the room
-    private final List<ZwanzigAbPlayer> attendees; // sub-list of players, which are actually in the game (alive).
-    private final PropertyChangeListener playerListener;
-    private final Gson gson;
-    private final List<Integer> finishSoundIds;
-    private final String videoRoomName;
-    private final CardDealService cardDealService;
-
-    private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
-    private ZwanzigAbPlayer gameLooser = null;
-    private ZwanzigAbPlayer mover = null; // this is like the cursor or pointer of the player which has to move. 
-    private boolean webradioPlaying = true;
-    private int finishSoundIdCursor = 0;
-    private int finishSoundId = 0;
+    public ZwanzigAbGame() {
+        this("", new ArrayList<>());
+    }
 
     /**
-     * Constructor. Creates a new instance from given value.
+     * Constructor. Creates an instance of this class from given Value.
      *
-     * @param confName the jitsy video conference name.
+     * @param conferenceName the room name for the jitsi conference
+     * @param webradioList list of known webradios
      */
-    public ZwanzigAbGame(String confName) {
-        this(confName, new CardDealServiceImpl());
+    public ZwanzigAbGame(String conferenceName, List<WebradioUrl> webradioList) {
+        this(conferenceName, new CardDealServiceImpl(), webradioList);
     }
 
     /**
      * Package protected constructor. Required for unit testing.
-     *
-     * @param conferenceName the room name for the jitsi conference.
-     * @param cardDealService the card dealer service.
      */
-    ZwanzigAbGame(String conferenceName, CardDealService cardDealService) {
-        super(CARDS_32);
-        players = Collections.synchronizedList(new ArrayList<>());
-        playerIdComparator = new PlayerIdComparator(players);
-        attendees = Collections.synchronizedList(new ArrayList<>());
-        playerListener = this::playerPropertyChanged;
-        gson = new Gson();
-        finishSoundIds = new ArrayList<>();
-        initFinishSoundIds();
-        videoRoomName = conferenceName;
+    ZwanzigAbGame(String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
+        super(CARDS_32, conferenceName, webradioList);
         this.cardDealService = cardDealService;
+        this.cardComparator = new CardComparator();
+        round = new Round(this);
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
-    /**
-     * Getter for property game state.
-     *
-     * @param player the player for which it is asked for. Will vary e.g. if the
-     * player is allowed to knock etc.
-     * @return the game state for this player.
-     */
-    public GameStateMessage getGameState(ZwanzigAbPlayer player) {
-        return new GameStateMessage();
-    }
-
-    /**
-     * Getter for property Attendees count.
-     *
-     * @return the number of attendees in the game.
-     */
-    public int getAttendeesCount() {
-        return attendees.size();
-    }
-
-    /**
-     * Getter for property game phase.
-     *
-     * @return the current game phase.
-     */
-    public GAMEPHASE getGamePhase() {
-        return gamePhase;
-    }
-
-    /**
-     * Setter for property WebRadioPlaying.
-     *
-     * @param play true to turn on the webradio, false to turn off.
-     */
-    public void setWebRadioPlaying(boolean play) {
-        boolean oldValue = webradioPlaying;
-        webradioPlaying = play;
-        firePropertyChange(PROP_WEBRADIO_PLAYING, oldValue, play);
-    }
-
-    /**
-     * Getter for property WebradioPlaying.
-     *
-     * @return true if the webradio is currently playing, false otherwise.
-     */
-    public boolean isWebradioPlaying() {
-        return webradioPlaying;
-    }
-
-    /**
-     * Sends a ping to all clients. Required to prevent the websocket timeout in
-     * case of no action.
-     */
-    public void sendPing() {
-        sendToPlayers("{\"action\":\"ping\"}");
-    }
-
-    /**
-     * Sends a message to all players.
-     *
-     * @param message the message in JSON format.
-     */
-    public void sendToPlayers(String message) {
-        players.forEach(p -> {
-            p.getSocket().sendString(message);
-        });
-    }
-
-    /**
-     * Sends a chat message to all clients.
-     *
-     * @param text the text to be send to the chat.
-     */
-    public void chat(String text) {
-        chat(text, null);
-    }
-
-    /**
-     * Sends a chat message to all clients.
-     *
-     * @param text the text to be send to the chat.
-     * @param sender the sending player.
-     */
-    public void chat(String text, ZwanzigAbPlayer sender) {
-        if (text != null && !text.trim().isEmpty()) {
-            ChatMessage chatMessage = new ChatMessage(text, sender);
-            sendToPlayers(gson.toJson(chatMessage));
+    @Override
+    public void addPlayerToRoom(Player player) {
+        super.addPlayerToRoom(player);
+        if (gameStartDealer == null) {
+            gameStartDealer = player;
         }
-    }
-
-    /**
-     * Getter for property videoRoomName.
-     *
-     * @return the name for the room in Jitsi meet.
-     */
-    public String getVideoRoomName() {
-        return videoRoomName;
-    }
-
-    /**
-     * Lookup for a player by name.
-     *
-     * @param name the player's name.
-     * @return the player specified by name, null if there isn't one.
-     */
-    public ZwanzigAbPlayer getPlayer(String name) {
-        return players.stream().filter(player -> player.getName().equalsIgnoreCase(name)).findAny().orElse(null);
-    }
-
-    /**
-     * The Login function. A player logged in and therefore "entered the room".
-     *
-     * @param player the player causing the event.
-     */
-    public void addPlayerToRoom(ZwanzigAbPlayer player) {
-        if (mover == null) {
-            mover = player;
-        }
-        player.addPropertyChangeListener(playerListener);
-        players.add(player);
-        firePropertyChange(PROP_PLAYERLIST, null, players);
-        String msg = player.getName() + " ist gekommen";
-        chat(msg);
-        LOGGER.info(msg);
         if (gamePhase == GAMEPHASE.waitForAttendees) {
             addAttendee(player);
         }
     }
 
-    /**
-     * The logout function. A player logged out and therefore "left the round".
-     * Currently disabled in the clients.
-     *
-     * @param player the player causing the event.
-     */
-    public void removePlayerFromRoom(ZwanzigAbPlayer player) {
+    @Override
+    public void removePlayerFromRoom(Player player) {
         if (gamePhase != GAMEPHASE.waitForAttendees) {
             LOGGER.warn("Spieler kann jetzt nicht abgemeldet werden. Spiel laeuft!");
             return;
         }
-        if (isAttendee(player)) {
-            removeAttendee(player);
-        }
-        if (player.equals(gameLooser)) {
-            gameLooser = null;
-        }
-        player.removePropertyChangeListener(playerListener);
-        players.remove(player);
-        firePropertyChange(PROP_PLAYERLIST, null, players);
-        String msg = "Spieler " + player.getName() + " ist gegangen";
-        chat(msg);
-        LOGGER.info(msg);
+        super.removePlayerFromRoom(player);
     }
 
-    /**
-     * Lookup for property isAttendee.
-     *
-     * @param player the player for which it is asked for.
-     * @return true if the player is currently attendee of the game, false
-     * otherwise.
-     */
-    public boolean isAttendee(ZwanzigAbPlayer player) {
-        return attendees.contains(player);
-    }
-
-    /**
-     * Adds a player to the list of attendees.
-     *
-     * @param attendee player to add to the attendees.
-     */
-    public void addAttendee(ZwanzigAbPlayer attendee) {
+    @Override
+    public void addAttendee(Player attendee) {
         if (gamePhase == GAMEPHASE.waitForAttendees) {
             if (!attendees.contains(attendee)) {
                 if (players.contains(attendee)) {
@@ -276,16 +149,14 @@ public class ZwanzigAbGame extends CardGame {
         }
     }
 
-    /**
-     * Removes a player from the list of attendees.
-     *
-     * @param attendee the player to remove from the attendees.
-     */
-    public void removeAttendee(ZwanzigAbPlayer attendee) {
+    @Override
+    public void removeAttendee(Player attendee) {
         if (attendees.contains(attendee)) {
             attendees.remove(attendee);
             if (attendee.equals(mover)) {
                 mover = guessNextGameStarter();
+            }
+            if (gamePhase == GAMEPHASE.waitForAttendees) {
             }
             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
             LOGGER.debug("Player '" + attendee + "' removed from attendees list");
@@ -294,29 +165,88 @@ public class ZwanzigAbGame extends CardGame {
         }
     }
 
-    public void startGame() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    private void playerPropertyChanged(PropertyChangeEvent evt) {
-        switch (evt.getPropertyName()) {
-            case ZwanzigAbPlayer.PROP_LOGOUT:
-                ZwanzigAbPlayer player = (ZwanzigAbPlayer) evt.getSource();
-                removePlayerFromRoom(player);
-                break;
-            case ZwanzigAbPlayer.PROP_ONLINE:
-                firePropertyChange(PROP_PLAYER_ONLINE, null, evt.getSource());
-                break;
-            case ZwanzigAbPlayer.PROP_SOCKETMESSAGE:
-                processMessage((ZwanzigAbPlayer) evt.getSource(), (SocketMessage) evt.getNewValue());
-                break;
+    @Override
+    public void shufflePlayers() {
+        if (gamePhase == GAMEPHASE.waitForAttendees) {
+            super.shufflePlayers();
+        } else {
+            LOGGER.warn("Das Umsetzen der Spieler ist im Spiel nicht erlaubt.");
         }
     }
 
-    /*
-    /* Messages from the players 
+    @Override
+    public String getName() {
+        return GAME_NAME;
+    }
+
+    @Override
+    public Image getIcon() {
+        return GAME_ICON;
+    }
+
+    @Override
+    public void startGame() {
+        if (gamePhase == GAMEPHASE.waitForAttendees) {
+            List<Player> offlineAttendees = new ArrayList<>();
+            attendees.forEach((attendee) -> {
+                attendee.reset();
+                if (!attendee.isOnline()) {
+                    offlineAttendees.add(attendee);
+                }
+            });
+            offlineAttendees.forEach(attendee -> removeAttendee(attendee));
+            if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
+                firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
+            }
+            round.roundCounter = 0;
+            initRound(guessNextGameStarter());
+            mover = round.trumper;
+            gameCounter++;
+            setGamePhase(GAMEPHASE.shuffle);
+        } else {
+            LOGGER.warn("Das Spiel ist bereits gestartet!");
+        }
+    }
+
+    @Override
+    public void stopGame() {
+        if (gamePhase != GAMEPHASE.waitForAttendees) {
+            mover = guessNextGameStarter();
+            setGamePhase(GAMEPHASE.waitForAttendees);
+            chat("Spiel #" + gameCounter + " wurde abgebrochen");
+        } else {
+            LOGGER.warn("Das Spiel ist bereits gestoppt!");
+        }
+    }
+
+    /**
+     * Getter for property game phase.
+     *
+     * @return the current game phase.
      */
-    private void processMessage(ZwanzigAbPlayer player, SocketMessage message) {
+    public GAMEPHASE getGamePhase() {
+        return gamePhase;
+    }
+
+    /**
+     * Getter for property game state.
+     *
+     * @param player the player for which it is asked for.
+     * @return the game state for this player in JSON format
+     */
+    private GameStateMessage getGameStateMessage(Player player) {
+        return new GameStateMessage(gamePhase.name(), players, attendees, mover, round.dealer,
+                player.getStack(), round.trump,
+                isWebradioPlaying(), getRadioUrl());
+    }
+
+    @Override
+    public String getGameState(Player player) {
+        return gson.toJson(getGameStateMessage(player));
+    }
+
+    @Override
+    protected void processMessage(Player player, SocketMessage message) {
         switch (message.action) {
             case "addToAttendees":
                 addAttendee(player);
@@ -324,14 +254,365 @@ public class ZwanzigAbGame extends CardGame {
             case "removeFromAttendees":
                 removeAttendee(player);
                 break;
+            case "startGame":
+                processStartGame(player);
+                break;
+            case "heartBlind":
+                processHeartBlind(player, message);
+                break;
+            case "setTrump":
+                processSetTrump(player, message);
+                break;
+            case "buy":
+                processBuy(player, message);
+                break;
+            case "skip":
+                processSkip(player, message);
+                break;
+            case "move":
+                processMove(player, message);
+                break;
+            case "chat":
+                chat(message.jsonObject.get("text").getAsString(), player);
+                break;
             default:
                 LOGGER.warn("Unknown message from player '" + player.getName() + "': '" + message.jsonString);
         }
     }
 
+    private void processMove(Player player, SocketMessage message) {
+        if (player.equals(mover)) {
+            if (gamePhase == GAMEPHASE.waitForPlayerMove) {
+                int cardID = message.jsonObject.get("cardID").getAsInt();
+                if (isValidMove(player, cardID)) {
+                    Card card = player.getStack().remove(cardID);
+                    round.add(card, player);
+                    attendees.forEach((attendee)
+                            -> attendee.getSocket().sendString(gson.toJson(
+                                    new MoveResult(cardID, card, attendee.equals(player) ? attendee.getStack() : null))));
+                    stepMove();
+                } else {
+                    LOGGER.warn(String.format("Zug nicht erlaubt (Karte #%d)", (cardID + 1)));
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
+        }
+    }
+
+    private void processSkip(Player player, SocketMessage message) {
+        if (player.equals(mover)) {
+            if (gamePhase == GAMEPHASE.buy) {
+                if (canSkip(player)) {
+                    round.skippers.add(player);
+                    player.increaseSkipCount();
+                    player.getStack().clear();
+                    BuyResult buyResult = new BuyResult(); // -> this is the skip message
+                    attendees.forEach((attendee) -> attendee.getSocket().sendString(gson.toJson(buyResult)));
+                    stepBuySkip();
+                } else {
+                    LOGGER.warn("Spieler " + player.getName() + " darf nicht aussetzen!");
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.buy));
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
+        }
+    }
+
+    private void processBuy(Player player, SocketMessage message) {
+        if (player.equals(mover)) {
+            if (gamePhase == GAMEPHASE.buy) {
+                if (canBuy(player)) {
+                    JsonArray cardIDs = message.jsonObject.getAsJsonArray("cardIDs");
+                    if (isValidBuy(cardIDs)) {
+                        player.resetSkipCount();
+                        List<Card> stack = player.getStack();
+                        int[] cardIDsInt = new int[cardIDs.size()];
+                        for (int i = 0; i < cardIDs.size(); i++) {
+                            int id = cardIDs.get(i).getAsInt();
+                            cardIDsInt[i] = id;
+                            stack.set(id, getFromStack());
+                        }
+                        attendees.forEach((attendee)
+                                -> attendee.getSocket().sendString(gson.toJson(
+                                        new BuyResult(cardIDsInt, attendee.equals(player) ? attendee.getStack() : null))));
+                        if (cardIDsInt.length > 0) {
+                            player.getStack().sort(getCardComparator());
+                            player.getSocket().sendString(gson.toJson(new SortedStack(player.getStack())));
+                        }
+                        stepBuySkip();
+                    } else {
+                        LOGGER.warn("Ungueltige Tauschaktion (ungueltige Anzahl oder Doubletten)");
+                    }
+                } else {
+                    LOGGER.warn("Spieler " + player.getName() + " darf nicht tauschen!");
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.buy));
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
+        }
+    }
+
+    private void processSetTrump(Player player, SocketMessage message) {
+        if (player.equals(mover)) {
+            if (gamePhase == GAMEPHASE.deal3cards) {
+                int color = message.jsonObject.get("value").getAsInt();
+                if (color >= 0 && color <= Card.KREUZ) {
+                    cardDealService.dealCardsPacked(2, this);
+                    if (color > 0) {
+                        round.trump = new Trump(color);
+                    } else {
+                        round.trump = new Trump(player.getStack().get(3)); // next card
+                    }
+                    LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color));
+                    sendToPlayers(gson.toJson(round.trump));
+                    attendees.forEach((attendee)
+                            -> attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack()))));
+                    setGamePhase(GAMEPHASE.deal2cards);
+                    sortPlayerStacks();
+                    startBuySkip();
+                } else {
+                    LOGGER.warn(String.format("Farbe nicht bekannt: %d", color));
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.deal3cards));
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
+        }
+    }
+
+    private void processHeartBlind(Player player, SocketMessage message) {
+        if (player.equals(mover)) {
+            if (gamePhase == GAMEPHASE.shuffle) {
+                boolean blind = message.jsonObject.get("value").getAsBoolean();
+                LOGGER.info("Herz-Blind: " + blind);
+                if (blind) {
+                    round.trump = new Trump(Card.HERZ, true);
+                    LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color) + " blind");
+                    sendToPlayers(gson.toJson(round.trump));
+                    cardDealService.dealCardsSingle(5, this); // deal all five cards
+                    attendees.forEach((attendee)
+                            -> attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack()))));
+                    setGamePhase(GAMEPHASE.deal5cards);
+                    sortPlayerStacks();
+                    startBuySkip();
+                } else {
+                    // deal the first three cards
+                    cardDealService.dealCardsPacked(3, this);
+                    attendees.forEach((attendee)
+                            -> attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack()))));
+                    setGamePhase(GAMEPHASE.deal3cards);
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.shuffle));
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
+        }
+    }
+
+    private void processStartGame(Player player) {
+        if (gamePhase == GAMEPHASE.waitForAttendees) {
+            if (attendees.contains(player)) {
+//                if (player.equals(mover) || mover == null) {
+                startGame();
+                LOGGER.debug("Player '" + player + "' started the game");
+//                }
+            } else {
+                LOGGER.warn("'" + player + "' is not an attendee!");
+            }
+        }
+    }
+
+    private void setGamePhase(GAMEPHASE phase) {
+        LOGGER.info("GamePhase: '" + phase + "'");
+        this.gamePhase = phase;
+        firePropertyChange(PROP_GAMEPHASE, null, phase);
+    }
+
+    private void initRound(Player dealer) {
+        round.reset(dealer);
+        shuffleStack();
+        attendees.forEach(attendee -> attendee.clearStack());
+    }
+
+    private void sortPlayerStacks() {
+        Comparator<? super Card> comp = getCardComparator();
+        attendees.forEach((attendee) -> {
+            attendee.getStack().sort(comp);
+            attendee.getSocket().sendString(gson.toJson(new SortedStack(attendee.getStack())));
+        });
+    }
+
+    private boolean isValidMove(Player player, int cardID) {
+        List<Card> playerStack = player.getStack();
+        if (cardID < 0 || cardID >= playerStack.size()) {
+            return false;
+        }
+        Card card = playerStack.get(cardID);
+        if (card == null) {
+            return false;
+        }
+        if (round.stack.size() > 0) { // color already defined?
+            int stackColor = round.stack.get(0).getColor();
+            int cardColor = card.getColor();
+            if (cardColor != stackColor) {
+                if (player.countColor(stackColor) > 0) {
+                    return false; // didn't match the color
+                }
+                if (cardColor != round.trump.color && player.countColor(round.trump.color) > 0) {
+                    return false; // didn't use available trump card
+                }
+            }
+        }
+        return true;
+    }
+
+    private void stepMove() {
+        // end of stack? (all players did move?)
+        if (round.isLastStackMove()) {
+            Player stackWinner = round.cardPlayerMap.get(getMaxCardOfStack(round.stack));
+            stackWinner.increaseRoundTokens();
+            round.stack.clear();
+            round.stackCounter++;
+
+            // end of current round?
+            if (round.stackCounter == 5) {
+                attendees.forEach(player -> {
+                    if (!round.skippers.contains(player)) {
+                        int score = player.getRoundTokens();
+                        if (score == 0) {
+                            score = -5;
+                        }
+                        if (round.trump.isHeartBlind()) {
+                            score *= 4;
+                        } else if (round.trump.color == Card.HERZ) {
+                            score *= 2;
+                        }
+                        if (score < 0 && player.equals(round.trumper)) {
+                            score *= 2;
+                        }
+                        player.addGameTokens(-score);
+                    }
+                });
+                // end of game?
+                if (attendees.stream().anyMatch((player) -> (player.getGameTokens() <= 0))) {
+                    // TODO
+                    Player winner = findWinner();
+                    for (Player player : attendees) {
+                        if (player.getGameTokens() > 0 && !player.equals(winner)) {
+                            winner.addTotalTokens(player.getGameTokens());
+                            player.addTotalTokens(-player.getGameTokens());
+                        }
+                    }
+                    setGamePhase(GAMEPHASE.gameOver);
+                    setGamePhase(GAMEPHASE.waitForAttendees);
+                } else {
+                    // start next round
+                    initRound(round.trumper);
+                    mover = round.trumper;
+                    setGamePhase(GAMEPHASE.shuffle);
+                }
+            } else {
+                // continue round, start next stack
+                mover = stackWinner;
+                LOGGER.debug("New mover: " + mover);
+                setGamePhase(GAMEPHASE.waitForPlayerMove);
+            }
+        } else {
+            // continue stack, shift mover to the next (non-skipping) player
+            mover = getNextTo(mover);
+            while (round.skippers.contains(mover)) {
+                mover = getNextTo(mover);
+            }
+            LOGGER.debug("New mover: " + mover);
+            setGamePhase(GAMEPHASE.waitForPlayerMove);
+        }
+    }
+
+    private Player findWinner() {
+        int score = 1;
+        Player winner = null;
+        for (Player player : attendees) {
+            if (player.getGameTokens() < score) {
+                winner = player;
+                score = player.getGameTokens();
+            }
+        }
+        return winner;
+    }
+
+    // one to three cards and no doublette
+    private boolean isValidBuy(JsonArray cardIDs) {
+        Set<Integer> ids = new HashSet<>();
+        if (cardIDs.size() >= 0 && cardIDs.size() <= 3) {
+            for (int i = 0; i < cardIDs.size(); i++) {
+                int id = cardIDs.get(i).getAsInt();
+                if (ids.contains(id)) {
+                    return false;
+                }
+                ids.add(id);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void startBuySkip() {
+        round.remainingBuyers.clear();
+        Player player = mover;
+        for (int i = 0; i < attendees.size(); i++) {
+            round.remainingBuyers.add(player);
+            player = getNextTo(player);
+        }
+        stepBuySkip();
+    }
+
+    private void stepBuySkip() {
+        Player player = round.remainingBuyers.poll();
+        while (player != null) {
+            if (canBuyOrSkip(player)) {
+                mover = player;
+                setGamePhase(GAMEPHASE.buy);
+                return;
+            } else {
+                LOGGER.debug("Spieler " + player.getName() + " darf weder tauschen noch aussetzen");
+                player = round.remainingBuyers.poll();
+            }
+        }
+        // buy-phase has ended
+        mover = round.trumper;
+        setGamePhase(GAMEPHASE.waitForPlayerMove);
+    }
+
+    private boolean canSkip(Player player) {
+        return (!round.trump.isClub()) // wenn Trumpf nicht Kreuz ist
+                && round.roundCounter > 1 // wenn das Spiel nicht in der ersten Runde ist
+                && player.getGameTokens() > 5 // wenn der Spieler mehr als 5 Punkte hat
+                && player.getSkipCount() < (attendees.size() - 2) // wenn er nicht schon zu oft hintereinander ausgesetzt hat
+                && round.skippers.size() < (attendees.size() - 2) // wenn nicht schon zu viele andere Spieler ausgestiegen sind
+                && !round.trumper.equals(player) // wenn der Spieler nicht trumpfangebend ist
+                ;
+    }
+
+    private boolean canBuy(Player player) {
+        return player.getGameTokens() > 3;
+    }
+
+    private boolean canBuyOrSkip(Player player) {
+        return canBuy(player) || canSkip(player);
+    }
+
     /* Round and Game has finished. Now look for the Player which must start the next Game. */
-    private ZwanzigAbPlayer guessNextGameStarter() {
-        ZwanzigAbPlayer nextMover = (gameLooser != null && attendees.contains(gameLooser)) ? gameLooser : getNextTo(gameLooser);
+    private Player guessNextGameStarter() {
+        Player nextMover = (gameStartDealer != null && attendees.contains(gameStartDealer)) ? gameStartDealer : getNextTo(gameStartDealer);
         if (nextMover == null || !nextMover.isOnline()) {
             // look for the next attendee
             if (!attendees.isEmpty()) {
@@ -358,81 +639,63 @@ public class ZwanzigAbGame extends CardGame {
         return nextMover;
     }
 
-    int getFinishSoundCount() {
-        return 13;
-    }
-
-    private void initFinishSoundIds() {
-        int soundCount = getFinishSoundCount();
-        List<Integer> soundIDs = new ArrayList<>();
-        for (int i = 0; i < soundCount; i++) {
-            soundIDs.add(i);
-        }
-        while (soundIDs.size() > 0) {
-            int randomId = (int) Math.round(Math.random() * (soundIDs.size() - 1));
-            finishSoundIds.add(soundIDs.get(randomId));
-            soundIDs.remove(randomId);
-        }
-        if (finishSoundIds.size() == soundCount) {
-            LOGGER.info("Finish Sound IDs initialized successfully");
-        } else {
-            LOGGER.error("Finish Sound IDs initialization failed");
-        }
-    }
-
-    int getNextFinishSoundId() {
-        finishSoundIdCursor++;
-        if (finishSoundIdCursor >= finishSoundIds.size()) {
-            finishSoundIdCursor = 0;
-        }
-        return finishSoundIds.get(finishSoundIdCursor);
-    }
-
-    private void shiftMover() {
-        mover = getNextTo(mover);
-        LOGGER.debug("New mover: " + mover);
-    }
-
-    private ZwanzigAbPlayer getNextTo(ZwanzigAbPlayer player) {
-        if (attendees.isEmpty()) {
+    public Card getMaxCardOfStack(List<Card> stack) {
+        if (stack == null || stack.isEmpty()) {
             return null;
         }
-        int index = attendees.indexOf(player) + 1;
-        return attendees.get(index < attendees.size() ? index : 0);
+        Card result = null;
+        int firstCardColor = ((Card) stack.get(0)).getColor();
+        int trumpColor = round.trump.color;
+        boolean needTrumpf = false;
+        for (Card card : stack) {
+            if (!needTrumpf && card.getColor() == trumpColor) { // Erste Trumpfkarte
+                result = card;
+                needTrumpf = true;
+            } else if (needTrumpf) { // Es wurde bereits Trumpf gespielt
+                if (card.getColor() == trumpColor && card.getValue() > result.getValue()) {
+                    result = card;
+                }
+            } else if (result == null || (card.getValue() > result.getValue() && card.getColor() == firstCardColor)) {// Kein Trumpf im Spiel
+                result = card;
+            }
+        }
+        return result;
     }
 
-    static class PlayerIdComparator implements Comparator<ZwanzigAbPlayer> {
+    Comparator<? super Card> getCardComparator() {
+        cardComparator.setTrump(round.trump != null ? round.trump.color : 0);
+        return cardComparator;
+    }
 
-        final List<ZwanzigAbPlayer> playerList;
-
-        public PlayerIdComparator(List<ZwanzigAbPlayer> playerList) {
-            this.playerList = playerList;
-        }
-
-        @Override
-        public int compare(ZwanzigAbPlayer p1, ZwanzigAbPlayer p2) {
-            return playerList.indexOf(p1) < playerList.indexOf(p2) ? -1 : 1;
-        }
+    Round getRound() { // for unit testing
+        return round;
     }
 
     interface CardDealService {
 
-        void dealCards(ZwanzigAbGame game);
+        void dealCardsPacked(int count, ZwanzigAbGame game);
+
+        void dealCardsSingle(int count, ZwanzigAbGame game);
     }
 
-    private static class CardDealServiceImpl implements CardDealService {
+    static class CardDealServiceImpl implements CardDealService {
 
         @Override
-        public void dealCards(ZwanzigAbGame game) {
-//            game.shuffleStack();
-//            for (int i = 0; i < 3; i++) {
-//                game.attendees.forEach((attendee) -> {
-//                    attendee.getStack().add(game.getFromStack());
-//                    if (attendee.equals(game.mover)) {
-//                        game.dealerStack.add(game.getFromStack());
-//                    }
-//                });
-//            }
+        public void dealCardsPacked(int count, ZwanzigAbGame game) {
+            game.attendees.forEach((attendee) -> {
+                for (int i = 0; i < count; i++) {
+                    attendee.getStack().add(game.getFromStack());
+                }
+            });
+        }
+
+        @Override
+        public void dealCardsSingle(int count, ZwanzigAbGame game) {
+            for (int i = 0; i < count; i++) {
+                game.attendees.forEach((attendee) -> {
+                    attendee.getStack().add(game.getFromStack());
+                });
+            }
         }
     }
 }
