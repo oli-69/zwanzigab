@@ -65,6 +65,18 @@
                     <div>Karten werden gemischt...</div><br>
                     <input type="button" class="dialogButton" id="startDealingBtn" value="Starte ausgeben!" onclick="startDealing()" />
                 </div>
+                <div id="heartBlindDialog">
+                    <div>Herz Blind?</div><br>
+                    <input type="button" class="dialogButton" id="heartBlindYesBtn" value="Ja" onclick="onHeartBlindSelection(true)" />
+                    <input type="button" class="dialogButton" id="heartBlindNoBtn" value="Nein" onclick="onHeartBlindSelection(false)" />
+                </div>
+                <div id="trumpDialog">
+                    <div>Trumpffarbe w&auml;hlen</div><br>
+                    <img src="cards/suit-diamond.png">                    
+                    <img src="cards/suit-heart.png">                    
+                    <img src="cards/suit-spade.png">                    
+                    <img src="cards/suit-club.png">                    
+                </div>
             </div>
 
             <div id="loginPage">

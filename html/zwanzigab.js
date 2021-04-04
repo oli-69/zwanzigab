@@ -2,7 +2,6 @@ var webSocket;
 var isOnline = false;
 var fadePanelSpeed = 500;
 var messageBuffer = [];
-var questionMessageBuffer = [];
 var videoWindow;
 var videoRoomName = "";
 
@@ -184,9 +183,14 @@ function onServerMessage(data) {
                 onGamePhaseMessage(message);
             });
             break;
-        case "playerStack":
+        case "attendeeStacks":
             messageBuffer.push(function () {
-                onPlayerStack(message);
+                onAttendeeStacks(message);
+            });
+            break;
+        case "sortedStack":
+            messageBuffer.push(function () {
+                onSortedStack(message);
             });
             break;
         case "ping":

@@ -1,9 +1,9 @@
 var myName;
 var gamePhase;
 var players; // list of all players in the room
-var attendees; // list of players currently in game (still alive)
+var attendees; // list of players currently in game
 var mover;
-var playerStack;
+var attendeeStacks = [];
 var gameStack;
 var gameStackOffsets = [];
 var gameStackRotations = [];
@@ -26,6 +26,7 @@ function onDocumentReady() {
     shufflingCard = $(getSvgCard(coveredCard).getUI()).clone();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
+    setGameDialogVisible($("#heartBlindDialog"), false);
 
     // connect the enter key to the input fields.
     $('#pName').focus();
@@ -79,15 +80,10 @@ function onGameState(message) {
 //    gameStack = message.gameStack.cards;
 //    gameStackOffsets = message.gameStack.offset;
 //    gameStackRotations = message.gameStack.rotation;
-    playerStack = message.playerStack.cards;
+    parseAttendeeStacks(message.attendeeStacks);
     updatePlayerList();
     updateAttendeeList();
-    updateAttendeeStacks(message);
-    var msg = mover === myName ? "" : "Warte auf " + mover;
-//    $("#discoverMessage").html(msg);
-//    $("#knockMessage").html(msg);
-//    $("#passMessage").html(msg);
-//    $("#stackSelectMessage").html(msg);
+    updateAttendeeStacks();
     onGamePhase(gamePhase);
     setWebRadioUrl(message.radioUrl.url);
     if (!webradioStateLoaded) {
@@ -100,28 +96,32 @@ function onGamePhaseMessage(message) {
     mover = undefined;
     gamePhase = message.phase;
     mover = message.actor;
+    var readyFunction = function () {
+        log("READY");
+        onGamePhase(gamePhase);
+        onMessageBuffer();
+    };
     switch (gamePhase) {
         case "shuffle":
             updateAttendeeStacks(undefined);
-            onGamePhase(gamePhase);
+            readyFunction();
             break;
-//        case "dealCards":
-//            viewerStacks = message.viewerStackList.viewerStacks;
-//            updateAttendeeList();
-//            updateAttendeeStacks(undefined);
-//            sound.deal.play();
-//            animateDealCards(function () {
-//                onGamePhase(gamePhase);
-//                onMessageBuffer();
-//            });
-//            break;
+        case "deal3cards":
+        case "deal2cards":
+        case "deal5cards":
+            updateAttendeeList();
+            updateAttendeeStacks();
+            sound.deal.play();
+            var animateDeal = (gamePhase === "deal5cards") ? animateDeal5Cards : ((gamePhase === "deal3cards") ? animateDeal3Cards : animateDeal2Cards);
+            animateDeal(readyFunction);
+            break;
         case "waitForAttendees":
             updateAttendeeList();
-            onGamePhase(gamePhase);
+            readyFunction();
             break;
 //        case "waitForPlayerMove":
 //            updateAttendeeStacks(undefined);
-//            onGamePhase(gamePhase);
+            readyFunction();
 //            break;
 //        case "moveResult":
 //            viewerStacks = message.viewerStackList.viewerStacks;
@@ -139,9 +139,8 @@ function onGamePhase(phase) {
     var meIsMoverInGame = (phase === "waitForPlayerMove" && meIsMover);
     var isActive = isAttendee();
     setGameDialogVisible($("#joinInOutDialog"), isWaitForAttendees);
-    setGameDialogVisible($("#dealCardsDialog"), meIsShuffling);
-//    setGameDialogVisible($("#selectDealerStackDialog"), meIsDealing);
-//    setGameDialogVisible($("#discoverDialog"), isDiscover);
+    setGameDialogVisible($("#heartBlindDialog"), meIsMover && phase === "shuffle");
+//    setGameDialogVisible($("#dealCardsDialog"), meIsShuffling);
     initDialogButtons();
 
     // reset all card selections and hovers
@@ -152,9 +151,9 @@ function onGamePhase(phase) {
         emptyAllStackDesks();
     }
     updatePlayerList();
-//    updateControlPanelMessage();
+    updateControlPanelMessage();
 //    updateCardStack($("#gameStack"), gameStack);
-    updateCardStack(attendeesCardStacks[getMyAttendeeId()], playerStack);
+    updateAttendeeStacks();
     updateAttendeeDeskColor();
 //
 //    // Control Panel
@@ -233,9 +232,81 @@ function onAttendeeList(message) {
     initDialogButtons();
 }
 
+function onAttendeeStacks(message) {
+    messageInProgress = false;
+    parseAttendeeStacks(message);
+    logStack("Player Stack", attendeeStacks[getMyAttendeeId()]);
+}
+
+function parseAttendeeStacks(attendeeStacksMessage) {
+    var keys = Object.keys(attendeeStacksMessage.stackMap);
+    if (keys !== undefined && keys !== null) {
+        keys.forEach(function (id) {
+            attendeeStacks[id] = attendeeStacksMessage.stackMap[id].cards;
+        });
+    }
+}
+
+function onSortedStack(message) {
+    var id = getMyAttendeeId();
+    var srcStack = attendeeStacks[id];
+    attendeeStacks[id] = message.stack.cards;
+
+    var readyFunction = function () {
+        messageInProgress = false;
+        onMessageBuffer();
+    };
+    var childs = attendeesCardStacks[id].children();
+    var dstStack = attendeeStacks[id];
+    var card;
+    var refProps = getCardAnimProps($(childs[Math.round(dstStack.length * 0.5) - 1]));
+    var srcProps;
+    var dstProps = [];
+    for (var i = 0; i < srcStack.length; i++) {
+        dstProps[i] = getCardAnimProps($(childs[ getStackId(srcStack[i], dstStack)]));
+    }
+    var loopBack = function () {
+        updateCardStack(attendeesCardStacks[id], attendeeStacks[id]);
+        for (var i = 0; i < srcStack.length; i++) {
+            card = $(childs[i]);
+            card.css({top: refProps.y, left: refProps.x});
+            animateSingleCard(card, parseFloat(refProps.y), parseFloat(refProps.x), refProps.r, dstProps[i],
+                    0, 1000, (i === dstStack.length - 1) ? readyFunction() : undefined);
+        }
+    };
+    for (var i = 0; i < srcStack.length; i++) {
+        card = $(childs[i]);
+        srcProps = getCardAnimProps($(childs[i]));
+        card.css({top: srcProps.y, left: srcProps.x});
+        animateSingleCard(card, parseFloat(srcProps.y), parseFloat(srcProps.x), srcProps.r, refProps,
+                0, 300, (i === dstStack.length - 1) ? loopBack : undefined);
+    }
+}
+
+function logStack(name, stack) {
+    var msg = name + ": ";
+    if (stack !== undefined) {
+        for (var i = 0; i < stack.length; i++) {
+            msg = msg + (i + 1) + ":'" + card2String(stack[i].color, stack[i].value) + "' ";
+        }
+    }
+    log(msg);
+}
 
 /* ---------------------------------------------------------------------------*/
 
+
+function updateControlPanelMessage() {
+    var msg = "";
+    if (myName === mover) {
+        msg = "Du bist dran";
+    } else {
+        if (mover !== undefined && mover !== "") {
+            msg = mover + " ist dran";
+        }
+    }
+    $("#bottomPanelMessage").html(msg);
+}
 
 function updatePlayerList() {
     var panel = $("#playerListPanel");
@@ -329,34 +400,20 @@ function createAttendeeDesk(player, stackDesk) {
 
 
 function emptyAllStackDesks() {
-    playerStack = undefined;
-    gameStack = undefined;
+    for (var i = 0; i < attendeeStacks.length; i++) {
+        attendeeStacks[i] = [];
+    }
+    gameStack = [];
     attendeesCardStacks.forEach(function (desk) {
         desk.empty();
     });
     $("#gameStack").empty();
 }
 
-function updateAttendeeStacks(message) {
+function updateAttendeeStacks() {
     try {
-        var id = getAttendeeId();
-        var myDesk = id >= 0 ? attendeesCardStacks[id] : undefined;
         for (var i = 0; i < attendees.length; i++) {
-            id = getNextAttendeeId(id);
-            var desk = attendeesCardStacks[id];
-            if (desk !== myDesk) {
-                var playerName = players[id].name;
-                var isAttendee = getAttendeeIdByName(playerName) >= 0;
-//                updateCardStack(desk, isAttendee
-//                        ? (viewerStack !== undefined
-//                                ? viewerStack
-//                                : ((gamePhase !== "waitForAttendees" && gamePhase != "shuffle")
-//                                        ? coveredStack
-//                                        : undefined))
-//                        : undefined);
-            } else {
-                updateCardStack(desk, playerStack);
-            }
+            updateCardStack(attendeesCardStacks[i], attendeeStacks[i]);
         }
     } catch (e) {
         log("Fehler in updateAttendeeStacks(): '" + e + "'");
@@ -377,25 +434,26 @@ function updateCardStack(desk, cards) {
             var isGameStack = cards === gameStack;
             desk.empty();
             if (cards !== undefined && cards.length > 0) {
-                var isCovered = (cards === coveredStack);
-                var rotStepX = 7.5; // in degrees
+                var rotStepX = 7; // in degrees
+                var rotBase = -0.5 * rotStepX * cards.length;
                 for (var i = 0; i < cards.length; i++) {
+                    var isCovered = cards[i].color < 0 || cards[i].value < 0;
                     var svg = (isCovered) ? getSvgCard(cards[i]).getUI().clone() : getSvgCard(cards[i]).getUI();
-                    var card = $(svg);
-                    card.css("position", "fixed");
-                    desk.append(card);
+                    var cardObj = $(svg);
+                    cardObj.css("position", "fixed");
+                    desk.append(cardObj);
                     if (isGameStack) {
-                        var props = getGameStackProperties(i, card, desk);
-                        card.css({top: props.y, left: props.x, transform: "rotate(" + props.r + "deg)"});
+                        var props = getGameStackProperties(i, cardObj, desk);
+                        cardObj.css({top: props.y, left: props.x, transform: "rotate(" + props.r + "deg)"});
                     } else {
-                        var shiftX = 0.5 * card.width();
-                        var y = ((desk.height() - card.height()) >> 1);
-                        var x = ((desk.width() - card.width()) >> 1) - shiftX;
-                        card.css("top", desk.offset().top + y + "px");
-                        card.css("left", desk.offset().left + x + i * shiftX + "px");
-                        card.css("transform", "rotate(" + (-rotStepX + i * rotStepX) + "deg)");
+                        var shiftX = 0.3 * cardObj.width();
+                        var y = ((desk.height() - cardObj.height()) >> 1);
+                        var x = ((desk.width() - cardObj.width()) >> 1) - ((cards.length-1) * 0.5 * shiftX);
+                        cardObj.css("top", desk.offset().top + y + "px");
+                        cardObj.css("left", desk.offset().left + x + i * shiftX + "px");
+                        cardObj.css("transform", "rotate(" + (rotBase + i * rotStepX) + "deg)");
                     }
-                    card.css("transform-origin", "50% 50%");
+                    cardObj.css("transform-origin", "50% 50%");
                 }
             }
         }
@@ -428,7 +486,7 @@ function setGameDialogVisible(dialog, visible) {
 }
 
 function getShuffleCardsPosition(card) {
-    var dealerStack = attendeesCardStacks[getPlayerIdByName(mover)];
+    var dealerStack = attendeesCardStacks[getPreviousAttendeeId(getPlayerIdByName(mover))];
     var off = dealerStack.offset();
     return {
         top: off.top + (dealerStack.height() - card.height()),
@@ -458,6 +516,139 @@ function setShuffling(isShuffling) {
         shufflingCard.remove();
     }
 }
+
+// Deal all 5 cards one-by-one (heart blind)
+function animateDeal5Cards(readyFunction) {
+    var cards = [];
+    var props = [];
+    var dealerId = getPreviousAttendeeId(getPlayerIdByName(mover));
+    var id = dealerId;
+    var numPlayers = attendees.length;
+    var c = 0;
+    var childs;
+    var card = shufflingCard;
+    var pos = getShuffleCardsPosition(card);
+    for (var y = 0; y < 5; y++) {
+        for (var i = 0; i < numPlayers; i++) {
+            id = getNextAttendeeId(id);
+            childs = attendeesCardStacks[id].children();
+            if (childs.length > 0) {
+                card = $(childs[y]);
+                props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
+                card.css({top: pos.top, left: pos.left});
+                card.hide();
+                cards[c++] = card;
+            }
+        }
+    }
+    var delay = 400;
+    for (var i = 0; i < cards.length; i++) {
+        animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, (i === cards.length - 1) ? readyFunction : undefined);
+    }
+}
+
+function animateDeal3Cards(readyFunction) {
+    animateDealCards(3, readyFunction);
+}
+
+function animateDeal2Cards(readyFunction) {
+    animateDealCards(2, readyFunction);
+}
+
+function animateDealCards(count, readyFunction) {
+    var cards = [];
+    var props = [];
+    var dealerId = getPreviousAttendeeId(getPlayerIdByName(mover));
+    var id = dealerId;
+    var numPlayers = attendees.length;
+    var childs;
+    var card = shufflingCard;
+    var pos = getShuffleCardsPosition(card);
+    for (var p = 0; p < numPlayers; p++) {
+        id = getNextAttendeeId(id);
+        childs = attendeesCardStacks[id].children();
+        cards[p] = [];
+        props[p] = [];
+        for (var c = 0; c < count; c++) {
+            card = $(childs[childs.length - c - 1]);
+            props[p][c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
+            card.css({top: pos.top, left: pos.left});
+            card.hide();
+            cards[p][c] = card;
+        }
+    }
+    var delay = 800;
+    var delaySum = 0;
+    for (var p = 0; p < cards.length; p++) {
+        for (var c = 0; c < cards[p].length; c++) {
+            var isFirstCardOfPlayer = c === 0;
+            var isLastCard = (p === cards.length - 1 && c === cards[p].length - 1);
+            delaySum += p * (isFirstCardOfPlayer ? delay : 0);
+            if (isLastCard) {
+                animateDealSingleCard(cards[p][c], pos.top, pos.left, props[p][c], delaySum, readyFunction);
+            } else {
+                animateDealSingleCard(cards[p][c], pos.top, pos.left, props[p][c], delaySum);
+            }
+        }
+    }
+}
+
+function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
+    var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
+    var animTime = 1.75 * distance;
+    animateSingleCard(card, top, left, 0, props, delay, animTime, readyFunction);
+}
+
+function animateSingleCard(card, top, left, rot, props, delay, animTime, readyFunction) {
+    card.prop("rot", rot);
+    var animProps = {
+        duration: animTime,
+        step: function (now, tween) {
+            if (tween.prop === "rot") {
+                card.css("transform", "rotate(" + now + "deg)");
+            }
+        }
+    };
+    if (typeof readyFunction === "function") {
+        animProps.complete = readyFunction;
+    }
+    setTimeout(function () {
+        card.show();
+        card.animate({top: props.y, left: props.x, rot: props.r}, animProps);
+    }, delay);
+}
+
+function calculateDistanceBetweenPoints(x1, y1, x2, y2) {
+    return Math.sqrt((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1));
+}
+
+function getRotationDegrees(obj) {
+    var angle = 0;
+    var matrix = obj.css("-webkit-transform") ||
+            obj.css("-moz-transform") ||
+            obj.css("-ms-transform") ||
+            obj.css("-o-transform") ||
+            obj.css("transform");
+    if (matrix !== 'none') {
+        var values = matrix.split('(')[1].split(')')[0].split(',');
+        var a = values[0];
+        var b = values[1];
+        angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+    }
+    return angle;
+}
+
+function getCardAnimProps(card) {
+    return {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
+}
+
+//function getRandomVariation(time, factor) {
+//    if (factor === undefined) {
+//        factor = 40.0; // 40%
+//    }
+//    var f = 1 + (Math.random() - 0.5) / 100.0 * factor;
+//    return time * f;
+//}
 
 
 /* ---------------------------------------------------------------------------*/
@@ -504,6 +695,21 @@ function getNextAttendeeId(currentId) {
 }
 
 
+function getPreviousAttendeeId(currentId) {
+    var id = currentId - 1;
+    return id >= 0 ? id : (attendees.length - 1);
+}
+
+function getStackId(card, stack) {
+    for (var i = 0; i < stack.length; i++) {
+        if (stack[i].color === card.color
+                && stack[i].value === card.value) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 /* ---------------------------------------------------------------------------*/
 
 
@@ -529,3 +735,12 @@ function removeFromAttendees() {
     webSocket.send(JSON.stringify(msg));
 }
 
+function startDealing() {
+    var msg = {"action": "dealCards"};
+    webSocket.send(JSON.stringify(msg));
+}
+
+function onHeartBlindSelection(isBlind) {
+    var msg = {"action": "heartBlind", "value": isBlind};
+    webSocket.send(JSON.stringify(msg));
+}

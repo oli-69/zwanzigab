@@ -216,7 +216,7 @@ main {
     text-align: center;
 }
 
-#joinInOutDialog, #dealCardsDialog{
+#joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
     text-align: center;
     background-color: rgba(0,0,0,0.6);
     color: white;
@@ -320,7 +320,7 @@ main {
     #bottomPanel{
         padding: 0.4em;
     }
-    #joinInOutDialog, #dealCardsDialog{
+    #joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
         background-color: rgba(0,0,0,0.75);
         font-size: 1.3em;
     }
@@ -356,7 +356,7 @@ main {
     #bottomPanel{
         padding: 0.6em;
     }
-    #joinInOutDialog, #dealCardsDialog{
+    #joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
         font-size: 1.6em;
     }
 

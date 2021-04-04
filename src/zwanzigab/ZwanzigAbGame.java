@@ -5,15 +5,17 @@ import cardgame.CardGame;
 import static cardgame.CardGame.PROP_ATTENDEESLIST;
 import cardgame.Player;
 import cardgame.SocketMessage;
-import cardgame.messages.PlayerStack;
+import cardgame.messages.AttendeeStacks;
 import cardgame.messages.WebradioUrl;
 import com.google.gson.JsonArray;
 import java.awt.Image;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.swing.ImageIcon;
 import org.apache.logging.log4j.LogManager;
@@ -236,7 +238,7 @@ public class ZwanzigAbGame extends CardGame {
      */
     private GameStateMessage getGameStateMessage(Player player) {
         return new GameStateMessage(gamePhase.name(), players, attendees, mover, round.dealer,
-                player.getStack(), round.trump,
+                getAttendeeStackMap(player), round.trump,
                 isWebradioPlaying(), getRadioUrl());
     }
 
@@ -373,7 +375,7 @@ public class ZwanzigAbGame extends CardGame {
                     LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color));
                     sendToPlayers(gson.toJson(round.trump));
                     attendees.forEach((attendee)
-                            -> attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack()))));
+                            -> attendee.getSocket().sendString(gson.toJson(new AttendeeStacks(getAttendeeStackMap(attendee)))));
                     setGamePhase(GAMEPHASE.deal2cards);
                     sortPlayerStacks();
                     startBuySkip();
@@ -399,7 +401,7 @@ public class ZwanzigAbGame extends CardGame {
                     sendToPlayers(gson.toJson(round.trump));
                     cardDealService.dealCardsSingle(5, this); // deal all five cards
                     attendees.forEach((attendee)
-                            -> attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack()))));
+                            -> attendee.getSocket().sendString(gson.toJson(new AttendeeStacks(getAttendeeStackMap(attendee)))));
                     setGamePhase(GAMEPHASE.deal5cards);
                     sortPlayerStacks();
                     startBuySkip();
@@ -407,7 +409,7 @@ public class ZwanzigAbGame extends CardGame {
                     // deal the first three cards
                     cardDealService.dealCardsPacked(3, this);
                     attendees.forEach((attendee)
-                            -> attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack()))));
+                            -> attendee.getSocket().sendString(gson.toJson(new AttendeeStacks(getAttendeeStackMap(attendee)))));
                     setGamePhase(GAMEPHASE.deal3cards);
                 }
             } else {
@@ -660,6 +662,20 @@ public class ZwanzigAbGame extends CardGame {
             }
         }
         return result;
+    }
+
+    private Map<Integer, List<Card>> getAttendeeStackMap(Player player) {
+        Map<Integer, List<Card>> attendeeStackMap = new HashMap<>();
+        for( int i=0; i<attendees.size(); i++) {
+            Player attendee = attendees.get(i);
+            List<Card> stack = new ArrayList<>();
+            boolean isPlayer = attendee.equals(player);
+            attendee.getStack().forEach(card -> {
+                stack.add(isPlayer ? card : Card.COVERED);
+            });
+            attendeeStackMap.put(i, stack);
+        }
+        return attendeeStackMap;
     }
 
     Comparator<? super Card> getCardComparator() {
