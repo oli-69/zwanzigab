@@ -1,5 +1,6 @@
 var myName;
 var gamePhase;
+var trump;
 var players; // list of all players in the room
 var attendees; // list of players currently in game
 var mover;
@@ -27,6 +28,7 @@ function onDocumentReady() {
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#heartBlindDialog"), false);
+    setGameDialogVisible($("#trumpDialog"), false);
 
     // connect the enter key to the input fields.
     $('#pName').focus();
@@ -77,6 +79,7 @@ function onGameState(message) {
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
     mover = message.attendeeList.mover;
+    trump = message.trump;
 //    gameStack = message.gameStack.cards;
 //    gameStackOffsets = message.gameStack.offset;
 //    gameStackRotations = message.gameStack.rotation;
@@ -97,7 +100,6 @@ function onGamePhaseMessage(message) {
     gamePhase = message.phase;
     mover = message.actor;
     var readyFunction = function () {
-        log("READY");
         onGamePhase(gamePhase);
         onMessageBuffer();
     };
@@ -140,7 +142,7 @@ function onGamePhase(phase) {
     var isActive = isAttendee();
     setGameDialogVisible($("#joinInOutDialog"), isWaitForAttendees);
     setGameDialogVisible($("#heartBlindDialog"), meIsMover && phase === "shuffle");
-//    setGameDialogVisible($("#dealCardsDialog"), meIsShuffling);
+    setGameDialogVisible($("#trumpDialog"), meIsMover && phase === "deal3cards");
     initDialogButtons();
 
     // reset all card selections and hovers
@@ -148,9 +150,11 @@ function onGamePhase(phase) {
 
     // Game Area
     if (isWaitForAttendees || phase === "shuffle") {
+        trump = undefined;
         emptyAllStackDesks();
     }
     updatePlayerList();
+    updateRoundInfo();
     updateControlPanelMessage();
 //    updateCardStack($("#gameStack"), gameStack);
     updateAttendeeStacks();
@@ -279,7 +283,22 @@ function onSortedStack(message) {
         srcProps = getCardAnimProps($(childs[i]));
         card.css({top: srcProps.y, left: srcProps.x});
         animateSingleCard(card, parseFloat(srcProps.y), parseFloat(srcProps.x), srcProps.r, refProps,
-                0, 300, (i === dstStack.length - 1) ? loopBack : undefined);
+                0, 1000, (i === dstStack.length - 1) ? loopBack : undefined);
+    }
+}
+
+function onTrump(message) {
+    trump = message;
+    var animateTrumpFunction = function () {
+        animateTrumpSelected(function () {
+            messageInProgress = false;
+            onMessageBuffer();
+        });
+    };
+    if( trump !== undefined && trump !== null && trump.value > 0) {
+        animateNextCardTrump(animateTrumpFunction);
+    } else {
+        animateTrumpFunction();
     }
 }
 
@@ -321,6 +340,19 @@ function updatePlayerList() {
     });
 }
 
+function updateRoundInfo() {
+    var panel = $("#roundInfo");
+    if (gamePhase === "waitForAttendees") {
+        panel.hide();
+    } else {
+        panel.show();
+        $("#roundCounter").html("1");
+        if (trump !== undefined && trump !== null) {
+            trumpHtml = "<div class='trumpSymbol" + cardColorToString(trump.color) + "'>" + (trump.blind ? "x2" : "") + "</div>";
+        }
+        $("#trumpSymbolContainer").html(trumpHtml);
+    }
+}
 
 function updateAttendeeList() {
     var panel = $("#attendeesPanel");
@@ -448,7 +480,7 @@ function updateCardStack(desk, cards) {
                     } else {
                         var shiftX = 0.3 * cardObj.width();
                         var y = ((desk.height() - cardObj.height()) >> 1);
-                        var x = ((desk.width() - cardObj.width()) >> 1) - ((cards.length-1) * 0.5 * shiftX);
+                        var x = ((desk.width() - cardObj.width()) >> 1) - ((cards.length - 1) * 0.5 * shiftX);
                         cardObj.css("top", desk.offset().top + y + "px");
                         cardObj.css("left", desk.offset().left + x + i * shiftX + "px");
                         cardObj.css("transform", "rotate(" + (rotBase + i * rotStepX) + "deg)");
@@ -542,8 +574,11 @@ function animateDeal5Cards(readyFunction) {
         }
     }
     var delay = 400;
+    var finish = function () {
+        setTimeout(readyFunction, 1500)
+    };
     for (var i = 0; i < cards.length; i++) {
-        animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, (i === cards.length - 1) ? readyFunction : undefined);
+        animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, (i === cards.length - 1) ? finish : undefined);
     }
 }
 
@@ -552,7 +587,9 @@ function animateDeal3Cards(readyFunction) {
 }
 
 function animateDeal2Cards(readyFunction) {
-    animateDealCards(2, readyFunction);
+    animateDealCards(2, function () {
+        setTimeout(readyFunction, 1500)
+    });
 }
 
 function animateDealCards(count, readyFunction) {
@@ -595,7 +632,7 @@ function animateDealCards(count, readyFunction) {
 
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
     var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
-    var animTime = 1.75 * distance;
+    var animTime = 2.5 * distance;
     animateSingleCard(card, top, left, 0, props, delay, animTime, readyFunction);
 }
 
@@ -640,6 +677,43 @@ function getRotationDegrees(obj) {
 
 function getCardAnimProps(card) {
     return {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
+}
+
+function animateTrumpSelected(readyFunction) {
+    updateRoundInfo();
+    var scale = 16;
+    var animTime = 750;
+    var panel = $("#attendeesPanel");
+    var symbol = $("#trumpSymbolContainer");
+    var top = symbol.css("top");
+    var left = symbol.css("left");
+    symbol.css("left", (panel.width() - symbol.width()) >> 1);
+    symbol.css("top", ((panel.height() - symbol.height()) >> 1) * 0.75);
+    symbol.prop("sf", scale); // name "scale" and "size" won't work on all browsers
+    var animProps = {
+        duration: animTime,
+        easing: "linear",
+        step: function (now, tween) {
+            if (tween.prop === "sf") {
+                symbol.css("transform", "scale(" + now + ")");
+            }
+        }
+    };
+    if (typeof readyFunction === "function") {
+        animProps.complete = readyFunction;
+    }
+
+    symbol.animate({top: top, left: left, sf: 1}, animProps);
+}
+
+function animateNextCardTrump(readyFunction) {
+    
+    var dealerId = getPreviousAttendeeId(getPlayerIdByName(mover));
+    var id = dealerId;
+    var pos = getShuffleCardsPosition(shufflingCard);
+
+    
+    readyFunction();
 }
 
 //function getRandomVariation(time, factor) {
@@ -742,5 +816,11 @@ function startDealing() {
 
 function onHeartBlindSelection(isBlind) {
     var msg = {"action": "heartBlind", "value": isBlind};
+    webSocket.send(JSON.stringify(msg));
+}
+
+function onTrumpSelection(trump) {
+    setGameDialogVisible($("#trumpDialog"), false);
+    var msg = {"action": "setTrump", "value": trump};
     webSocket.send(JSON.stringify(msg));
 }

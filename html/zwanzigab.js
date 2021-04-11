@@ -193,6 +193,11 @@ function onServerMessage(data) {
                 onSortedStack(message);
             });
             break;
+        case "trump":
+            messageBuffer.push(function () {
+                onTrump(message);
+            });
+            break;
         case "ping":
             // ignore
             break;

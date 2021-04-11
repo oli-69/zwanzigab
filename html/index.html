@@ -40,6 +40,14 @@
                 <div id="attendeesPanel"></div>
                 <div id="gameDesk"><div id="gameStack" class="cardStack"></div></div>
                 <div id="playerListPanel"></div>
+                <div id="roundInfo">
+                    <div class="roundInfoItem">Runde:<div id="roundCounter">1</div></div>
+                    <div class="roundInfoItem"><div id="trumpSymbolContainer"></div></div>
+                </div>
+                <div id="scoreboard">
+                    <div class="scoreboardEntryName">Oli</div><div class="scoreboardEntryColon">:</div><div class="scoreboardEntryScore">20</div>
+                    <div class="scoreboardEntryName">Testuser</div><div class="scoreboardEntryColon">:</div><div class="scoreboardEntryScore">5</div>
+                </div>
                 <div id="bottomPanel">
                     <span id="bottomPanelMessage"></span><br>
                     <div id="chatContainer">
@@ -61,10 +69,6 @@
                     <input type="button" class="dialogButton" id="removeFromAttendeesBtn" value="Nicht Mitspielen" onclick="removeFromAttendees()" />
                     <input type="button" class="dialogButton" id="startGameBtn" value="Los gehts!" onclick="startGame()" />
                 </div>
-                <div id="dealCardsDialog">
-                    <div>Karten werden gemischt...</div><br>
-                    <input type="button" class="dialogButton" id="startDealingBtn" value="Starte ausgeben!" onclick="startDealing()" />
-                </div>
                 <div id="heartBlindDialog">
                     <div>Herz Blind?</div><br>
                     <input type="button" class="dialogButton" id="heartBlindYesBtn" value="Ja" onclick="onHeartBlindSelection(true)" />
@@ -72,10 +76,15 @@
                 </div>
                 <div id="trumpDialog">
                     <div>Trumpffarbe w&auml;hlen</div><br>
-                    <img src="cards/suit-diamond.png">                    
-                    <img src="cards/suit-heart.png">                    
-                    <img src="cards/suit-spade.png">                    
-                    <img src="cards/suit-club.png">                    
+                    <div id="trumpDlgSelectionOuter">
+                        <div id="trumpDlgSelectionInner"> 
+                            <div class="trumpDlgSuit" id="trumpDlgSuitDiamond" onclick="onTrumpSelection(1)"></div>                    
+                            <div class="trumpDlgSuit" id="trumpDlgSuitHeart" onclick="onTrumpSelection(2)"></div>                    
+                            <div class="trumpDlgSuit" id="trumpDlgSuitSpade" onclick="onTrumpSelection(3)"></div>                    
+                            <div class="trumpDlgSuit" id="trumpDlgSuitClub" onclick="onTrumpSelection(4)"></div>  
+                            <div class="trumpDlgSuit" id="trumpDlgBack" title="N&auml;chste Karte" onclick="onTrumpSelection(0)"></div>  
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -114,18 +123,21 @@
         <script>
             $(document).ready(function () {
                 onDocumentReady();
-                $("#pName").val("testUser");
-                $("#pPwd").val("123456");
+//                $("#pName").val("testUser");
+//                $("#pPwd").val("123456");
 //                login();
-//                if (!true) {
-//                    setLoginPageVisible(false);
-//                    myName = "Player 1";
-////                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}, {name: "Player 5"}];
-//                    players = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
-//                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
-//                    allAttendees = [0, 1, 2, 3];
-//                    updateAttendeeList();
-//                }
+                if (true) {
+                    setLoginPageVisible(false);
+                    myName = "Player 1";
+//                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}, {name: "Player 5"}];
+                    players = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
+                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
+                    allAttendees = [0, 1, 2, 3];
+                    updatePlayerList();
+                    updateAttendeeList();
+                    
+                    onTrump({"action":"trump","color":2,"blind": false,"value":10});
+                }
             });
         </script>
     </body>

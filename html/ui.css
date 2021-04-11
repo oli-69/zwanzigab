@@ -8,6 +8,10 @@ body{
 main {
 }
 
+#gamePage{
+    display: block;
+}
+
 #controlPanel{
     position: fixed;
     background-color: rgba(255,0,0,0.5);
@@ -147,7 +151,7 @@ main {
     padding: 0.25em;
     display: flex;
     flex-direction: column;
-    width:11em;
+    width:12em;
 }
 .moverDesk{
     background-color: rgba(255,255,0,0.1);
@@ -179,15 +183,6 @@ main {
     text-align: center;
     flex-grow: 1;
 }
-.cardViewerName{
-    color: silver;
-    font-weight: lighter;
-    font-size: 0.6em;
-    font-style:normal;
-    width: 100%;
-    text-align: left;
-
-}
 
 #playerListPanel{
     display: flex;
@@ -198,6 +193,7 @@ main {
     left: 0px;
     position: fixed;
 }
+
 .playerOffline {
     color: darkgray;
     margin-left: 0.5em;
@@ -214,6 +210,102 @@ main {
     margin-top: 0.1em;
     margin-bottom: 0.1em;
     text-align: center;
+}
+
+#roundInfo{
+    background-color: rgba(0,0,0,0.4);
+    position: fixed;
+    top: 2.55em;
+    left: 0px;
+    color: white;
+}
+
+.roundInfoItem {
+    display: flex;
+    margin-left: 0.5em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+    margin-right: 0.5em;
+}
+
+#roundCounter {
+    margin-left: 0.25em;
+}
+
+#trumpSymbolContainer {
+    position: absolute;
+    background: green;
+    margin: 0.25em;
+    border-color: rgba(255,255,255,0.0);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    background-color: rgba(255,255,255,0.25);
+}
+
+.trumpSymbolKreuz{
+    background-image: url("cards/suits/suit-club-32.png");
+    background-size: cover;
+    margin:0.25em;
+    width: 32px;
+    height: 33px;
+}
+
+.trumpSymbolPik{
+    background-image: url("cards/suits/suit-spade-32.png");
+    background-size: cover;
+    margin:0.25em;
+    width: 32px;
+    height: 33px;
+}
+
+.trumpSymbolHerz{
+    background-image: url("cards/suits/suit-heart-32.png");
+    background-size: cover;
+    margin:0.25em;
+    width: 32px;
+    height: 33px;
+    color: white;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.trumpSymbolKaro{
+    background-image: url("cards/suits/suit-diamond-32.png");
+    background-size: cover;
+    margin:0.25em;
+    width: 32px;
+    height: 33px;
+}
+
+#scoreboard{
+    background-color: rgba(0,0,0,0.4);
+    position: fixed;
+    top: 2.55em;
+    right: 0px;
+    color: white;
+
+    display: grid;
+    grid-template-columns: auto auto auto; 
+}
+
+.scoreboardEntryName{
+    margin-left: 0.5em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+}
+
+.scoreboardEntryColon{
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+}
+
+.scoreboardEntryScore{
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+    margin-left: 0.25em;
+    margin-right: 0.5em;
+    text-align: right;
 }
 
 #joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
@@ -233,12 +325,56 @@ main {
     padding: 1em;
 }
 
-.dialogButton{
-    margin-top: 0.5em;
+#trumpDlgSelectionOuter{
+    display: flex;
+    justify-content: center;
 }
 
-#gamePage{
-    display: block;
+#trumpDlgSelectionInner{
+    border-color: rgba(255,255,255,0.0);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    background-color: rgba(255,255,255,0.5);
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.trumpDlgSuit{
+    background-size: cover;
+    width: 32px;
+    height: 33px;
+    margin: 0.5em;
+}
+.trumpDlgSuit:hover{
+    cursor: pointer;
+}
+#trumpDlgSuitDiamond{
+    background-image: url("./cards/suits/suit-diamond-32.png");
+}
+
+#trumpDlgSuitHeart{
+    background-image: url("./cards/suits/suit-heart-32.png");
+}
+
+#trumpDlgSuitSpade{
+    background-image: url("./cards/suits/suit-spade-32.png");
+}
+
+#trumpDlgSuitClub{
+    background-image: url("./cards/suits/suit-club-32.png");
+}
+
+#trumpDlgBack{
+    background-image: url("./cards/suits/back-navy-48.png");
+    width: 33px;
+    height: 48px;
+}
+
+.dialogButton{
+    margin-top: 0.5em;
 }
 
 #loginPage{
@@ -280,7 +416,7 @@ main {
     body {
         font-size: 0.9em;
     }
-    #playerListPanel, #bottomPanel{
+    #playerListPanel, #scoreboard, #bottomPanel{
         background-color: rgba(0,0,0,0.5);
     }
     #attendeesPanel{
@@ -324,6 +460,58 @@ main {
         background-color: rgba(0,0,0,0.75);
         font-size: 1.3em;
     }
+
+    .trumpDlgSuit{
+        background-size: cover;
+        width: 48px;
+        height: 50px;
+        margin: 0.5em;
+    }
+    #trumpDlgSuitDiamond{
+        background-image: url("./cards/suits/suit-diamond-48.png");
+    }
+
+    #trumpDlgSuitHeart{
+        background-image: url("./cards/suits/suit-heart-48.png");
+    }
+
+    #trumpDlgSuitSpade{
+        background-image: url("./cards/suits/suit-spade-48.png");
+    }
+
+    #trumpDlgSuitClub{
+        background-image: url("./cards/suits/suit-club-48.png");
+    }
+
+    #trumpDlgBack{
+        background-image: url("./cards/suits/back-navy-64.png");
+        width: 46px;
+        height: 66px;
+    }
+
+    .trumpSymbolKreuz{
+        background-image: url("cards/suits/suit-club-48.png");
+        width: 48px;
+        height: 50px;
+    }
+
+    .trumpSymbolPik{
+        background-image: url("cards/suits/suit-spade-48.png");
+        width: 48px;
+        height: 50px;
+    }
+
+    .trumpSymbolHerz{
+        background-image: url("cards/suits/suit-heart-48.png");
+        width: 48px;
+        height: 50px;
+    }
+
+    .trumpSymbolKaro{
+        background-image: url("cards/suits/suit-diamond-48.png");
+        width: 48px;
+        height: 50px;
+    }
 }
 
 /* Viewports mit großer Auflösung */
@@ -358,6 +546,56 @@ main {
     }
     #joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
         font-size: 1.6em;
+    }
+
+    .trumpDlgSuit{
+        width: 64px;
+        height: 66px;
+    }
+    #trumpDlgSuitDiamond{
+        background-image: url("./cards/suits/suit-diamond-64.png");
+    }
+
+    #trumpDlgSuitHeart{
+        background-image: url("./cards/suits/suit-heart-64.png");
+    }
+
+    #trumpDlgSuitSpade{
+        background-image: url("./cards/suits/suit-spade-64.png");
+    }
+
+    #trumpDlgSuitClub{
+        background-image: url("./cards/suits/suit-club-64.png");
+    }
+
+    #trumpDlgBack{
+        background-image: url("./cards/suits/back-navy-64.png");
+        width: 46px;
+        height: 66px;
+    }
+
+    .trumpSymbolKreuz{
+        background-image: url("cards/suits/suit-club-64.png");
+        width: 64px;
+        height: 66px;
+    }
+
+    .trumpSymbolPik{
+        background-image: url("cards/suits/suit-spade-64.png");
+        width: 64px;
+        height: 66px;
+    }
+
+    .trumpSymbolHerz{
+        background-image: url("cards/suits/suit-heart-64.png");
+        width: 64px;
+        height: 66px;
+    }
+
+    .trumpSymbolKaro{
+        background-image: url("cards/suits/suit-diamond-64.png");
+        width: 64px;
+        height: 66px;
     }
 
 }
