@@ -8,6 +8,7 @@ public class Trump {
     public int color;
     public boolean blind;
     public int value;
+    public int dt;
 
     public Trump(int color) {
         this(color, false);
@@ -19,9 +20,10 @@ public class Trump {
         this.blind = blind;
     }
 
-    public Trump(cardgame.Card gameCard) {
+    public Trump(cardgame.Card gameCard, int time) {
         this.color = gameCard.getColor();
         this.value = gameCard.getValue();
+        this.dt = time;
         this.blind = false;
     }
 

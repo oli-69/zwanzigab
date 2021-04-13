@@ -370,7 +370,7 @@ public class ZwanzigAbGame extends CardGame {
                     if (color > 0) {
                         round.trump = new Trump(color);
                     } else {
-                        round.trump = new Trump(player.getStack().get(3)); // next card
+                        round.trump = new Trump(player.getStack().get(3), 300 + getRandomVariation(1500, 100)); // next card
                     }
                     LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color));
                     sendToPlayers(gson.toJson(round.trump));
@@ -666,7 +666,7 @@ public class ZwanzigAbGame extends CardGame {
 
     private Map<Integer, List<Card>> getAttendeeStackMap(Player player) {
         Map<Integer, List<Card>> attendeeStackMap = new HashMap<>();
-        for( int i=0; i<attendees.size(); i++) {
+        for (int i = 0; i < attendees.size(); i++) {
             Player attendee = attendees.get(i);
             List<Card> stack = new ArrayList<>();
             boolean isPlayer = attendee.equals(player);
@@ -676,6 +676,11 @@ public class ZwanzigAbGame extends CardGame {
             attendeeStackMap.put(i, stack);
         }
         return attendeeStackMap;
+    }
+
+    private int getRandomVariation(long time, float factor) {
+        double f = 1 + (Math.random() - 0.5) / 100.0 * factor;
+        return (int) Math.round(time * f);
     }
 
     Comparator<? super Card> getCardComparator() {

@@ -295,8 +295,8 @@ function onTrump(message) {
             onMessageBuffer();
         });
     };
-    if( trump !== undefined && trump !== null && trump.value > 0) {
-        animateNextCardTrump(animateTrumpFunction);
+    if (trump !== undefined && trump !== null && trump.value > 0) {
+        animateNextCardTrump({color: trump.color, value: trump.value}, trump.dt, animateTrumpFunction);
     } else {
         animateTrumpFunction();
     }
@@ -347,6 +347,7 @@ function updateRoundInfo() {
     } else {
         panel.show();
         $("#roundCounter").html("1");
+        var trumpHtml = "";
         if (trump !== undefined && trump !== null) {
             trumpHtml = "<div class='trumpSymbol" + cardColorToString(trump.color) + "'>" + (trump.blind ? "x2" : "") + "</div>";
         }
@@ -601,13 +602,14 @@ function animateDealCards(count, readyFunction) {
     var childs;
     var card = shufflingCard;
     var pos = getShuffleCardsPosition(card);
+    var isTrumpByNextCard = count === 2 && trump !== undefined && trump !== null && trump.value > 0;
     for (var p = 0; p < numPlayers; p++) {
         id = getNextAttendeeId(id);
         childs = attendeesCardStacks[id].children();
         cards[p] = [];
         props[p] = [];
         for (var c = 0; c < count; c++) {
-            card = $(childs[childs.length - c - 1]);
+            card = $(childs[childs.length - count + c]);
             props[p][c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
             card.css({top: pos.top, left: pos.left});
             card.hide();
@@ -620,19 +622,22 @@ function animateDealCards(count, readyFunction) {
         for (var c = 0; c < cards[p].length; c++) {
             var isFirstCardOfPlayer = c === 0;
             var isLastCard = (p === cards.length - 1 && c === cards[p].length - 1);
+            var srcPos = pos;
             delaySum += p * (isFirstCardOfPlayer ? delay : 0);
-            if (isLastCard) {
-                animateDealSingleCard(cards[p][c], pos.top, pos.left, props[p][c], delaySum, readyFunction);
-            } else {
-                animateDealSingleCard(cards[p][c], pos.top, pos.left, props[p][c], delaySum);
+            if (isTrumpByNextCard && p === 0 && c === 0) {
+                var trumpCard = $($("#gameStack").children()[0]);
+                srcPos = trumpCard.offset();
+                cards[p][c].css({top: srcPos.top, left: srcPos.left});
+                trumpCard.remove();
             }
+            animateDealSingleCard(cards[p][c], srcPos.top, srcPos.left, props[p][c], delaySum, isLastCard ? readyFunction : undefined);
         }
     }
 }
 
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
     var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
-    var animTime = 2.5 * distance;
+    var animTime = 4.5 * distance;
     animateSingleCard(card, top, left, 0, props, delay, animTime, readyFunction);
 }
 
@@ -706,24 +711,32 @@ function animateTrumpSelected(readyFunction) {
     symbol.animate({top: top, left: left, sf: 1}, animProps);
 }
 
-function animateNextCardTrump(readyFunction) {
-    
-    var dealerId = getPreviousAttendeeId(getPlayerIdByName(mover));
-    var id = dealerId;
-    var pos = getShuffleCardsPosition(shufflingCard);
-
-    
-    readyFunction();
+function animateNextCardTrump(card, discoverTime, readyFunction) {
+    $("body").prepend(shufflingCard);
+    shufflingCard.css("position", "fixed");
+    var srcPos = getShuffleCardsPosition(shufflingCard);
+    var gameStack = $("#gameStack");
+    var gameStackOffset = gameDesk.offset();
+    var props = {
+        y: gameStackOffset.top + ((gameDesk.height() - shufflingCard.height()) * 0.5),
+        x: gameStackOffset.left + ((gameDesk.width() - shufflingCard.width()) * 0.5),
+        r: 0
+    };
+    var discover = function () {
+        setTimeout(function () {
+            var cardObj = $(getSvgCard(card).getUI().clone());
+            cardObj.css("position", "fixed");
+            cardObj.css("top", props.y);
+            cardObj.css("left", props.x);
+            cardObj.css("transform", "rotate(0)");
+            shufflingCard.remove();
+            gameStack.append(cardObj);
+            setTimeout(readyFunction, 300);
+        }, discoverTime);
+    };
+    gameStack.append(shufflingCard);
+    animateSingleCard(shufflingCard, srcPos.top, srcPos.left, 0, props, 0, 2000, discover);
 }
-
-//function getRandomVariation(time, factor) {
-//    if (factor === undefined) {
-//        factor = 40.0; // 40%
-//    }
-//    var f = 1 + (Math.random() - 0.5) / 100.0 * factor;
-//    return time * f;
-//}
-
 
 /* ---------------------------------------------------------------------------*/
 
@@ -815,6 +828,7 @@ function startDealing() {
 }
 
 function onHeartBlindSelection(isBlind) {
+    setGameDialogVisible($("#heartBlindDialog"), false);
     var msg = {"action": "heartBlind", "value": isBlind};
     webSocket.send(JSON.stringify(msg));
 }
