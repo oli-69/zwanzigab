@@ -100,6 +100,7 @@ function onGamePhaseMessage(message) {
     gamePhase = message.phase;
     mover = message.actor;
     var readyFunction = function () {
+        log("Message '" + gamePhase + "' processed sucessfully");
         onGamePhase(gamePhase);
         onMessageBuffer();
     };
@@ -119,6 +120,9 @@ function onGamePhaseMessage(message) {
             break;
         case "waitForAttendees":
             updateAttendeeList();
+            readyFunction();
+            break;
+        case "buy":
             readyFunction();
             break;
 //        case "waitForPlayerMove":
@@ -257,6 +261,7 @@ function onSortedStack(message) {
     attendeeStacks[id] = message.stack.cards;
 
     var readyFunction = function () {
+        logStack("Player Stack", attendeeStacks[id]);
         messageInProgress = false;
         onMessageBuffer();
     };
@@ -264,26 +269,25 @@ function onSortedStack(message) {
     var dstStack = attendeeStacks[id];
     var card;
     var refProps = getCardAnimProps($(childs[Math.round(dstStack.length * 0.5) - 1]));
-    var srcProps;
     var dstProps = [];
     for (var i = 0; i < srcStack.length; i++) {
-        dstProps[i] = getCardAnimProps($(childs[ getStackId(srcStack[i], dstStack)]));
+        dstProps[i] = getCardAnimProps($(childs[i]));
     }
     var loopBack = function () {
         updateCardStack(attendeesCardStacks[id], attendeeStacks[id]);
-        for (var i = 0; i < srcStack.length; i++) {
+        childs = attendeesCardStacks[id].children();
+        for (var i = 0; i < childs.length; i++) {
             card = $(childs[i]);
-            card.css({top: refProps.y, left: refProps.x});
-            animateSingleCard(card, parseFloat(refProps.y), parseFloat(refProps.x), refProps.r, dstProps[i],
-                    0, 1000, (i === dstStack.length - 1) ? readyFunction() : undefined);
+            animateSingleCard(card, refProps.y, refProps.x, refProps.r, dstProps[i],
+                    0, 1000, (i === dstStack.length - 1) ? readyFunction : undefined);
         }
     };
+    var srcProps;
     for (var i = 0; i < srcStack.length; i++) {
         card = $(childs[i]);
-        srcProps = getCardAnimProps($(childs[i]));
-        card.css({top: srcProps.y, left: srcProps.x});
-        animateSingleCard(card, parseFloat(srcProps.y), parseFloat(srcProps.x), srcProps.r, refProps,
-                0, 1000, (i === dstStack.length - 1) ? loopBack : undefined);
+        srcProps = getCardAnimProps(card);
+        animateSingleCard(card, srcProps.y, srcProps.x, srcProps.r, refProps,
+                0, 1000, (i === srcStack.length - 1) ? loopBack : undefined);
     }
 }
 
@@ -468,7 +472,7 @@ function updateCardStack(desk, cards) {
             desk.empty();
             if (cards !== undefined && cards.length > 0) {
                 var rotStepX = 7; // in degrees
-                var rotBase = -0.5 * rotStepX * cards.length;
+                var rotBase = Math.ceil(-0.5 * cards.length) * rotStepX;
                 for (var i = 0; i < cards.length; i++) {
                     var isCovered = cards[i].color < 0 || cards[i].value < 0;
                     var svg = (isCovered) ? getSvgCard(cards[i]).getUI().clone() : getSvgCard(cards[i]).getUI();
@@ -621,13 +625,12 @@ function animateDealCards(count, readyFunction) {
     for (var p = 0; p < cards.length; p++) {
         for (var c = 0; c < cards[p].length; c++) {
             var isFirstCardOfPlayer = c === 0;
-            var isLastCard = (p === cards.length - 1 && c === cards[p].length - 1);
+            var isLastCard = (p === (cards.length - 1) && (c === cards[p].length - 1));
             var srcPos = pos;
             delaySum += p * (isFirstCardOfPlayer ? delay : 0);
             if (isTrumpByNextCard && p === 0 && c === 0) {
                 var trumpCard = $($("#gameStack").children()[0]);
                 srcPos = trumpCard.offset();
-                cards[p][c].css({top: srcPos.top, left: srcPos.left});
                 trumpCard.remove();
             }
             animateDealSingleCard(cards[p][c], srcPos.top, srcPos.left, props[p][c], delaySum, isLastCard ? readyFunction : undefined);
@@ -636,13 +639,14 @@ function animateDealCards(count, readyFunction) {
 }
 
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
-    var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
+    var distance = Math.abs(calculateDistanceBetweenPoints(parseFloat(left), parseFloat(top), parseFloat(props.x), parseFloat(props.y)));
     var animTime = 4.5 * distance;
     animateSingleCard(card, top, left, 0, props, delay, animTime, readyFunction);
 }
 
 function animateSingleCard(card, top, left, rot, props, delay, animTime, readyFunction) {
     card.prop("rot", rot);
+    card.css({top: top, left: left, transform: "rotate(" + rot + "deg)"});
     var animProps = {
         duration: animTime,
         step: function (now, tween) {
@@ -731,7 +735,7 @@ function animateNextCardTrump(card, discoverTime, readyFunction) {
             cardObj.css("transform", "rotate(0)");
             shufflingCard.remove();
             gameStack.append(cardObj);
-            setTimeout(readyFunction, 300);
+            setTimeout(readyFunction, 600);
         }, discoverTime);
     };
     gameStack.append(shufflingCard);
