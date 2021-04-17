@@ -8,9 +8,11 @@ public class GamePhase {
     public final String action = "gamePhase";
     public String phase;
     public String actor;
+    public boolean canSkip;
 
-    public GamePhase(GAMEPHASE phase, Player actor) {
+    public GamePhase(GAMEPHASE phase, Player actor, boolean canSkip) {
         this.phase = phase.name();
         this.actor = actor != null ? actor.getName() : "";
+        this.canSkip = canSkip;
     }
 }

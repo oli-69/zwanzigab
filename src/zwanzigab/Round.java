@@ -2,7 +2,6 @@ package zwanzigab;
 
 import cardgame.Card;
 import cardgame.Player;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -26,13 +25,14 @@ public class Round {
 
     final Queue<Player> remainingBuyers = new LinkedList<>();
     final Set<Player> skippers = new HashSet<>();
-    final List<Card> stack = new ArrayList<>();
+    final List<Card> stack;
     final Map<Card, Player> cardPlayerMap = new HashMap<>();
 
     private final ZwanzigAbGame game;
 
-    public Round(ZwanzigAbGame game) {
+    public Round(ZwanzigAbGame game, List<Card> gameStack) {
         this.game = game;
+        this.stack = gameStack;;
     }
 
     public void reset(Player dealer) {

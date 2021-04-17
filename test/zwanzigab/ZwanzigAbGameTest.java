@@ -4,6 +4,7 @@ import cardgame.Card;
 import cardgame.messages.LoginSuccess;
 import com.google.gson.Gson;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -58,7 +59,7 @@ public class ZwanzigAbGameTest {
 
     @Before
     public void setUp() {
-        game = new ZwanzigAbGame("", new CardDealServiceImpl(), new ArrayList<>());
+        game = new ZwanzigAbGame(Collections.synchronizedList(new ArrayList<>()), "", new CardDealServiceImpl(), new ArrayList<>());
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);

@@ -63,18 +63,21 @@
                         </div>
                     </div>
                 </div>
-                <div id="joinInOutDialog">
+                <div id="controlPanel">
+                    <input type="button" id="skipBtn" class="controlPanelBtn" value="Aussetzen" onclick="skipRound()"  disabled /> 
+                </div>
+                <div id="joinInOutDialog" class="gameDialog">
                     <div>Neues Spiel. Warte auf Mitspieler...</div><br>
                     <input type="button" class="dialogButton" id="addToAttendeesBtn" value="Mitspielen" onclick="addToAttendees()" />
                     <input type="button" class="dialogButton" id="removeFromAttendeesBtn" value="Nicht Mitspielen" onclick="removeFromAttendees()" />
                     <input type="button" class="dialogButton" id="startGameBtn" value="Los gehts!" onclick="startGame()" />
                 </div>
-                <div id="heartBlindDialog">
+                <div id="heartBlindDialog" class="gameDialog">
                     <div>Herz Blind?</div><br>
                     <input type="button" class="dialogButton" id="heartBlindYesBtn" value="Ja" onclick="onHeartBlindSelection(true)" />
                     <input type="button" class="dialogButton" id="heartBlindNoBtn" value="Nein" onclick="onHeartBlindSelection(false)" />
                 </div>
-                <div id="trumpDialog">
+                <div id="trumpDialog" class="gameDialog">
                     <div>Trumpffarbe w&auml;hlen</div><br>
                     <div id="trumpDlgSelectionOuter">
                         <div id="trumpDlgSelectionInner"> 
@@ -85,6 +88,10 @@
                             <div class="trumpDlgSuit" id="trumpDlgBack" title="N&auml;chste Karte" onclick="onTrumpSelection(0)"></div>  
                         </div>
                     </div>
+                </div>
+                <div id="buyDialog" class="gameDialog">
+                    <div>Karten zum Tauschen w&auml;hlen</div><br>
+                    <input type="button" class="dialogButton" value="Weiter" onclick="onBuy()" />
                 </div>
             </div>
 
@@ -123,7 +130,7 @@
         <script>
             $(document).ready(function () {
                 onDocumentReady();
-                $("#pName").val("testUser");
+                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "testUser");
                 $("#pPwd").val("123456");
 //                login();
 //                if (!true) {

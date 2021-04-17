@@ -63,12 +63,12 @@ public class GameChangeListener implements PropertyChangeListener {
 
     private GamePhase getMessageForPhase(GAMEPHASE phase) {
         Player actor = game.getMover();
-        switch (phase) {
-            case shuffle:
-                return new GamePhase(phase, actor);
-            default:
-                return new GamePhase(phase, actor);
-        }
+//        switch (phase) {
+//            case shuffle:
+                return new GamePhase(phase, actor, game.canSkip(actor));
+//            default:
+//                return new GamePhase(phase, actor);
+//        }
     }
     
     private void processGamePhase(PropertyChangeEvent evt) {

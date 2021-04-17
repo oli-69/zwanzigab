@@ -3,6 +3,7 @@ package zwanzigab;
 import cardgame.Card;
 import cardgame.CardGame;
 import static cardgame.CardGame.PROP_ATTENDEESLIST;
+import cardgame.GameStackProperties;
 import cardgame.Player;
 import cardgame.SocketMessage;
 import cardgame.messages.AttendeeStacks;
@@ -10,6 +11,7 @@ import cardgame.messages.WebradioUrl;
 import com.google.gson.JsonArray;
 import java.awt.Image;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -38,6 +40,7 @@ public class ZwanzigAbGame extends CardGame {
     private final CardDealService cardDealService;
     private final Round round;
     private final CardComparator cardComparator;
+    private final GameStackProperties gameStackProperties;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private Player gameStartDealer = null;
@@ -99,17 +102,18 @@ public class ZwanzigAbGame extends CardGame {
      * @param webradioList list of known webradios
      */
     public ZwanzigAbGame(String conferenceName, List<WebradioUrl> webradioList) {
-        this(conferenceName, new CardDealServiceImpl(), webradioList);
+        this(Collections.synchronizedList(new ArrayList<>()), conferenceName, new CardDealServiceImpl(), webradioList);
     }
 
     /**
      * Package protected constructor. Required for unit testing.
      */
-    ZwanzigAbGame(String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
+    ZwanzigAbGame(List<Card> gameStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
         super(CARDS_32, conferenceName, webradioList);
         this.cardDealService = cardDealService;
         this.cardComparator = new CardComparator();
-        round = new Round(this);
+        this.gameStackProperties = new GameStackProperties(gameStack, 0);
+        round = new Round(this, gameStack);
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
@@ -200,6 +204,7 @@ public class ZwanzigAbGame extends CardGame {
             if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
                 firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
             }
+            gameStackProperties.setSize(attendees.size());
             round.roundCounter = 0;
             initRound(guessNextGameStarter());
             mover = round.trumper;
@@ -238,7 +243,7 @@ public class ZwanzigAbGame extends CardGame {
      */
     private GameStateMessage getGameStateMessage(Player player) {
         return new GameStateMessage(gamePhase.name(), players, attendees, mover, round.dealer,
-                getAttendeeStackMap(player), round.trump,
+                gameStackProperties.getGameStack(), getAttendeeStackMap(player), round.trump, canSkip(player),
                 isWebradioPlaying(), getRadioUrl());
     }
 
@@ -291,7 +296,7 @@ public class ZwanzigAbGame extends CardGame {
                     round.add(card, player);
                     attendees.forEach((attendee)
                             -> attendee.getSocket().sendString(gson.toJson(
-                                    new MoveResult(cardID, card, attendee.equals(player) ? attendee.getStack() : null))));
+                                    new MoveResult(cardID, card, attendee.equals(player) ? attendee.getStack() : null, round.stack))));
                     stepMove();
                 } else {
                     LOGGER.warn(String.format("Zug nicht erlaubt (Karte #%d)", (cardID + 1)));
@@ -339,9 +344,10 @@ public class ZwanzigAbGame extends CardGame {
                             cardIDsInt[i] = id;
                             stack.set(id, getFromStack());
                         }
+                        Arrays.sort(cardIDsInt);
                         attendees.forEach((attendee)
                                 -> attendee.getSocket().sendString(gson.toJson(
-                                        new BuyResult(cardIDsInt, attendee.equals(player) ? attendee.getStack() : null))));
+                                        new BuyResult(cardIDsInt, attendee.equals(player) ? attendee.getStack() : getCoveredStack(attendee.getStack())))));
                         if (cardIDsInt.length > 0) {
                             player.getStack().sort(getCardComparator());
                             player.getSocket().sendString(gson.toJson(new SortedStack(player.getStack())));
@@ -594,7 +600,10 @@ public class ZwanzigAbGame extends CardGame {
         setGamePhase(GAMEPHASE.waitForPlayerMove);
     }
 
-    private boolean canSkip(Player player) {
+    public boolean canSkip(Player player) {
+        if (gamePhase != GAMEPHASE.buy || !player.equals(mover)) {
+            return false;
+        }
         return (!round.trump.isClub()) // wenn Trumpf nicht Kreuz ist
                 && round.roundCounter > 1 // wenn das Spiel nicht in der ersten Runde ist
                 && player.getGameTokens() > 5 // wenn der Spieler mehr als 5 Punkte hat
@@ -676,6 +685,12 @@ public class ZwanzigAbGame extends CardGame {
             attendeeStackMap.put(i, stack);
         }
         return attendeeStackMap;
+    }
+
+    private List<Card> getCoveredStack(List<Card> attendeeStack) {
+        List<Card> stack = new ArrayList<>();
+        attendeeStack.forEach(card -> stack.add(Card.COVERED));
+        return stack;
     }
 
     private int getRandomVariation(long time, float factor) {

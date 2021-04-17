@@ -4,6 +4,7 @@ var trump;
 var players; // list of all players in the room
 var attendees; // list of players currently in game
 var mover;
+var dealer;
 var attendeeStacks = [];
 var gameStack;
 var gameStackOffsets = [];
@@ -11,11 +12,13 @@ var gameStackRotations = [];
 var cardFlips = [5];
 var gameDesk;
 var attendeesCardStacks = [];
+var attendeesDropCardPositions = [];
 var coveredCard = {color: -1, value: -1};
 var shufflingCard;
 var messageInProgress;
 var webradioStateLoaded = false; // get webradio state only the first time 
-
+var selectedCards = [];
+var canSkip;
 
 function onDocumentReady() {
     $("#loginConsole").text("Anmeldung vorbereiten...");
@@ -24,6 +27,7 @@ function onDocumentReady() {
         $("#loginConsole").html("&nbsp;");
     });
     gameDesk = $("#gameDesk");
+    controlPanel = $("#controlPanel");
     shufflingCard = $(getSvgCard(coveredCard).getUI()).clone();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
@@ -79,10 +83,12 @@ function onGameState(message) {
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
     mover = message.attendeeList.mover;
+    dealer = message.dealer;
     trump = message.trump;
-//    gameStack = message.gameStack.cards;
-//    gameStackOffsets = message.gameStack.offset;
-//    gameStackRotations = message.gameStack.rotation;
+    canSkip = message.canSkip;
+    gameStack = message.gameStack.cards;
+    gameStackOffsets = message.gameStack.offset;
+    gameStackRotations = message.gameStack.rotation;
     parseAttendeeStacks(message.attendeeStacks);
     updatePlayerList();
     updateAttendeeList();
@@ -99,6 +105,7 @@ function onGamePhaseMessage(message) {
     mover = undefined;
     gamePhase = message.phase;
     mover = message.actor;
+    canSkip = message.canSkip;
     var readyFunction = function () {
         log("Message '" + gamePhase + "' processed sucessfully");
         onGamePhase(gamePhase);
@@ -106,6 +113,7 @@ function onGamePhaseMessage(message) {
     };
     switch (gamePhase) {
         case "shuffle":
+            dealer = attendees[getPreviousAttendeeId(getPlayerIdByName(mover))].name;
             updateAttendeeStacks(undefined);
             readyFunction();
             break;
@@ -125,14 +133,9 @@ function onGamePhaseMessage(message) {
         case "buy":
             readyFunction();
             break;
-//        case "waitForPlayerMove":
-//            updateAttendeeStacks(undefined);
+        case "waitForPlayerMove":
             readyFunction();
-//            break;
-//        case "moveResult":
-//            viewerStacks = message.viewerStackList.viewerStacks;
-//            onMoveResult(message.moveResult);
-//            break;
+            break;
     }
 }
 
@@ -140,13 +143,11 @@ function onGamePhase(phase) {
     log("onGamePhase: " + phase);
     var isWaitForAttendees = (phase === "waitForAttendees");
     var meIsMover = (mover === myName);
-    var meIsShuffling = (phase === "shuffle" && meIsMover);
-    var meIsDealing = ((phase === "dealCards" || phase === "finish31OnDeal") && meIsMover);
-    var meIsMoverInGame = (phase === "waitForPlayerMove" && meIsMover);
-    var isActive = isAttendee();
+    var meIsMoverInGame = ((phase === "buy") && meIsMover);
     setGameDialogVisible($("#joinInOutDialog"), isWaitForAttendees);
     setGameDialogVisible($("#heartBlindDialog"), meIsMover && phase === "shuffle");
     setGameDialogVisible($("#trumpDialog"), meIsMover && phase === "deal3cards");
+    setGameDialogVisible($("#buyDialog"), meIsMover && phase === "buy");
     initDialogButtons();
 
     // reset all card selections and hovers
@@ -160,18 +161,20 @@ function onGamePhase(phase) {
     updatePlayerList();
     updateRoundInfo();
     updateControlPanelMessage();
-//    updateCardStack($("#gameStack"), gameStack);
+    updateCardStack($("#gameStack"), gameStack);
     updateAttendeeStacks();
     updateAttendeeDeskColor();
-//
-//    // Control Panel
-//    if (meIsMoverInGame) {
-//        controlPanel.show();
-//    } else {
-//        controlPanel.hide();
-//    }
+
+    // Control Panel
+    if (meIsMoverInGame) {
+        controlPanel.show();
+    } else {
+        controlPanel.hide();
+    }
+    $("#skipBtn").prop("disabled", !canSkip);
 //    $("#logoffBtn").prop("disabled", !(isWaitForAttendees && isActive));
-//
+
+    selectedCards = [];
     setShuffling(phase === "shuffle");
 
     messageInProgress = false;
@@ -273,13 +276,14 @@ function onSortedStack(message) {
     for (var i = 0; i < srcStack.length; i++) {
         dstProps[i] = getCardAnimProps($(childs[i]));
     }
+    var animTime = 500;
     var loopBack = function () {
         updateCardStack(attendeesCardStacks[id], attendeeStacks[id]);
         childs = attendeesCardStacks[id].children();
         for (var i = 0; i < childs.length; i++) {
             card = $(childs[i]);
             animateSingleCard(card, refProps.y, refProps.x, refProps.r, dstProps[i],
-                    0, 1000, (i === dstStack.length - 1) ? readyFunction : undefined);
+                    0, animTime, (i === dstStack.length - 1) ? readyFunction : undefined);
         }
     };
     var srcProps;
@@ -287,7 +291,7 @@ function onSortedStack(message) {
         card = $(childs[i]);
         srcProps = getCardAnimProps(card);
         animateSingleCard(card, srcProps.y, srcProps.x, srcProps.r, refProps,
-                0, 1000, (i === srcStack.length - 1) ? loopBack : undefined);
+                0, animTime, (i === srcStack.length - 1) ? loopBack : undefined);
     }
 }
 
@@ -304,6 +308,37 @@ function onTrump(message) {
     } else {
         animateTrumpFunction();
     }
+}
+
+function onBuyResult(message) {
+    var readyFunction = function () {
+        messageInProgress = false;
+        onMessageBuffer();
+    };
+    if (message.cardIDs !== undefined && message.cardIDs !== null && message.cardIDs.length > 0) {
+        animateDropCards(message.cardIDs, function () {
+            animateDealBuyCards(message.cardIDs, message.stack, readyFunction);
+        });
+    } else {
+        readyFunction();
+    }
+}
+
+function onMoveResult(message) {
+    var moverID = getAttendeeIdByName(mover);
+    var readyFunction = function () {
+        if (moverID === getMyAttendeeId()) {
+            attendeeStacks[moverID] = message.playerStack.cards;
+        } else {
+            attendeeStacks[moverID].pop();
+        }
+        gameStack = message.gameStack.cards;
+        updateCardStack($("#gameStack"), gameStack);
+        updateCardStack(attendeesCardStacks[moverID], attendeeStacks[moverID]);
+        messageInProgress = false;
+        onMessageBuffer();
+    };
+    animatePlayCard(moverID, message.cardID, message.card, readyFunction);
 }
 
 function logStack(name, stack) {
@@ -374,6 +409,10 @@ function updateAttendeeList() {
         var isSmallSize = panel.width() < 800;
         var rx = panel.width() * (!isSmallSize ? 0.35 : 0.25);
         var ry = panel.height() * 0.26;
+        panel.append(gameDesk);
+        gameDesk.css({top: (panel.height() - gameDesk.height()) * 0.5 - ((isSmallSize) ? 0.075 : 0.085) * panel.height() + "px", left: (panel.width() - gameDesk.width()) * 0.5 + "px"});
+        var gdOff = gameDesk.offset();
+        var gdCenter = {y: gdOff.top + 0.5 * gameDesk.height(), x: gdOff.left + 0.5 * gameDesk.width()};
         for (var i = 0; i < numPl; i++) {
             id = getNextAttendeeId(id);
             attendeesCardStacks[id] = createCardStack();
@@ -387,15 +426,21 @@ function updateAttendeeList() {
             var t = ((panel.height() * 0.5) + ry * Math.sin(angle)
                     - (1.1 * attendeesCardStacks[id].outerHeight() * ((isSmallSize && othersCount > 1) ? 1.4 : 1)));
             attendeeDesk.css({left: l + "px", top: t + "px"});
+
+            attendeesDropCardPositions[id] = {
+                y: gdCenter.y + (0.25 * gameDesk.height()) * Math.sin(angle),
+                x: gdCenter.x + (0.25 * gameDesk.width()) * Math.cos(angle)
+            };
+
             if (id === myId) { // set the control panel position here
-//                controlPanel.css({left: l + attendeeDesk.outerWidth() + 4 + "px", top: t + "px"});
+                controlPanel.css({left: l + attendeeDesk.outerWidth() + 4 + "px", top: t + "px"});
             }
             angle += step;
         }
         if (!isAttendee()) {
+            gameDesk.remove();
             panel.append(gameDesk);
         }
-        gameDesk.css({top: (panel.height() - gameDesk.height()) * 0.5 - ((isSmallSize) ? 0.075 : 0.085) * panel.height() + "px", left: (panel.width() - gameDesk.width()) * 0.5 + "px"});
 
         updateAttendeeDeskColor();
         if (getMyAttendeeId() < 0) {
@@ -457,10 +502,10 @@ function updateAttendeeStacks() {
     }
 }
 
-function getGameStackProperties(id, card, desk) {
-    return {
-        y: desk.offset().top + ((desk.height() - card.height()) >> 1) + gameStackOffsets[id].y + "px",
-        x: desk.offset().left + ((desk.width() - card.width()) >> 1) - card.width() + id * card.width() + gameStackOffsets[id].x + "px",
+function getGameStackProperties(id, card) {
+    return  {
+        y: attendeesDropCardPositions[id].y - 0.5 * card.height() + gameStackOffsets[id].y + "px",
+        x: attendeesDropCardPositions[id].x - 0.5 * card.width() + gameStackOffsets[id].x + "px",
         r: gameStackRotations[id]
     };
 }
@@ -486,9 +531,11 @@ function updateCardStack(desk, cards) {
                         var shiftX = 0.3 * cardObj.width();
                         var y = ((desk.height() - cardObj.height()) >> 1);
                         var x = ((desk.width() - cardObj.width()) >> 1) - ((cards.length - 1) * 0.5 * shiftX);
-                        cardObj.css("top", desk.offset().top + y + "px");
-                        cardObj.css("left", desk.offset().left + x + i * shiftX + "px");
-                        cardObj.css("transform", "rotate(" + (rotBase + i * rotStepX) + "deg)");
+                        cardObj.css({
+                            "top": desk.offset().top + y + "px",
+                            "left": desk.offset().left + x + i * shiftX + "px",
+                            "transform": "rotate(" + (rotBase + i * rotStepX) + "deg)"
+                        });
                     }
                     cardObj.css("transform-origin", "50% 50%");
                 }
@@ -523,7 +570,7 @@ function setGameDialogVisible(dialog, visible) {
 }
 
 function getShuffleCardsPosition(card) {
-    var dealerStack = attendeesCardStacks[getPreviousAttendeeId(getPlayerIdByName(mover))];
+    var dealerStack = attendeesCardStacks[getPlayerIdByName(dealer)];
     var off = dealerStack.offset();
     return {
         top: off.top + (dealerStack.height() - card.height()),
@@ -558,7 +605,7 @@ function setShuffling(isShuffling) {
 function animateDeal5Cards(readyFunction) {
     var cards = [];
     var props = [];
-    var dealerId = getPreviousAttendeeId(getPlayerIdByName(mover));
+    var dealerId = getPlayerIdByName(dealer);
     var id = dealerId;
     var numPlayers = attendees.length;
     var c = 0;
@@ -600,7 +647,7 @@ function animateDeal2Cards(readyFunction) {
 function animateDealCards(count, readyFunction) {
     var cards = [];
     var props = [];
-    var dealerId = getPreviousAttendeeId(getPlayerIdByName(mover));
+    var dealerId = getPlayerIdByName(dealer);
     var id = dealerId;
     var numPlayers = attendees.length;
     var childs;
@@ -732,7 +779,7 @@ function animateNextCardTrump(card, discoverTime, readyFunction) {
             cardObj.css("position", "fixed");
             cardObj.css("top", props.y);
             cardObj.css("left", props.x);
-            cardObj.css("transform", "rotate(0)");
+            cardObj.css("transform", "rotate(0deg)");
             shufflingCard.remove();
             gameStack.append(cardObj);
             setTimeout(readyFunction, 600);
@@ -740,6 +787,77 @@ function animateNextCardTrump(card, discoverTime, readyFunction) {
     };
     gameStack.append(shufflingCard);
     animateSingleCard(shufflingCard, srcPos.top, srcPos.left, 0, props, 0, 2000, discover);
+}
+
+function animateDropCards(cardIDs, readyFunction) {
+    var myId = getMyAttendeeId();
+    var id = getAttendeeIdByName(mover);
+    var childs = attendeesCardStacks[id].children();
+    var dstPos = {
+        y: -shufflingCard.height(),
+        x: -shufflingCard.width(),
+        r: 0
+    };
+    for (var i = 0; i < cardIDs.length; i++) {
+        var cardId = cardIDs[i];
+        var oldCard = $(childs[cardId]);
+        var srcProps = getCardAnimProps(oldCard);
+        if (myId === id) {
+            var newCard = $(getSvgCard(coveredCard).getUI().clone());
+            newCard.css({top: srcProps.y, left: srcProps.x, transform: "rotate(" + srcProps.r + "deg)", position: "fixed"});
+            oldCard.replaceWith(newCard);
+            oldCard = newCard;
+        }
+        var isLastCard = i === (cardIDs.length - 1);
+        animateSingleCard(oldCard, srcProps.y, srcProps.x, srcProps.r, dstPos, 0, 1500, isLastCard ? readyFunction : undefined);
+    }
+}
+
+function animateDealBuyCards(cardIDs, stack, readyFunction) {
+    var srcPos = getShuffleCardsPosition(shufflingCard);
+    var moverID = getAttendeeIdByName(mover);
+    var newCards = stack.cards;
+    var dstProps = [];
+    attendeeStacks[moverID] = newCards;
+    updateCardStack(attendeesCardStacks[moverID], attendeeStacks[moverID]);
+    var childs = attendeesCardStacks[moverID].children();
+    for (var i = 0; i < cardIDs.length; i++) {
+        var cardID = cardIDs[i];
+        var card = $(childs[cardID]);
+        dstProps[i] = getCardAnimProps(card);
+        card.css({
+            top: srcPos.top,
+            left: srcPos.left,
+            transform: "rotate(0deg)"
+        });
+        card.hide();
+    }
+    for (var i = 0; i < cardIDs.length; i++) {
+        var cardID = cardIDs[i];
+        var isLastCard = i === (cardIDs.length - 1);
+        var card = $(childs[cardID]);
+        animateDealSingleCard(card, srcPos.top, srcPos.left, dstProps[i], i * 750, isLastCard ? readyFunction : undefined);
+    }
+}
+
+function animatePlayCard(moverID, cardID, card, readyFunction) {
+    var oldCard = $(attendeesCardStacks[moverID].children()[cardID]);
+    var dstProps = getGameStackProperties(moverID, oldCard);
+    var srcProps = getCardAnimProps(oldCard);
+    var newCard = $(getSvgCard(card).getUI().clone());
+    newCard.css({
+        top: srcProps.y,
+        left: srcProps.x,
+        transform: "rotate(" + srcProps + "deg)",
+        position: "fixed"
+    });
+    if (moverID === getMyAttendeeId()) {
+        oldCard.replaceWith(newCard);
+    } else {
+        oldCard.remove();
+        $("#gameStack").append(newCard);
+    }
+    animateSingleCard(newCard, srcProps.y, srcProps.x, srcProps.r, dstProps, 0, 1500, readyFunction);
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -804,6 +922,43 @@ function getStackId(card, stack) {
 /* ---------------------------------------------------------------------------*/
 
 
+function processCardHover(uiCard, isHover) {
+    if (mover === myName && (gamePhase === "buy" || gamePhase === "waitForPlayerMove")) {
+        uiCard.setHover(isHover);
+    }
+}
+
+function processCardClick(uiCard) {
+    if (mover === myName && (gamePhase === "buy" || gamePhase === "waitForPlayerMove")) {
+        var myId = getMyAttendeeId();
+        var cardId = getStackId(uiCard, attendeeStacks[myId]);
+        if (cardId >= 0) {
+            var card = getSvgCard(attendeeStacks[myId][cardId]);
+            switch (gamePhase) {
+                case "buy":
+                    if (card.selected) {
+                        selectedCards = selectedCards.filter(function (value, index, arr) {
+                            return value !== cardId;
+                        });
+                        card.setSelected(false);
+                    } else if (selectedCards.length < 3) {
+                        selectedCards.push(cardId);
+                        card.setSelected(true);
+                    }
+                    break;
+                case "waitForPlayerMove":
+                    selectedCards = [];
+                    card.setSelected(!(card.selected));
+                    if (card.selected) {
+                        selectedCards.push(cardId);
+                    }
+                    onPlayerMove();
+                    break;
+            }
+        }
+    }
+}
+
 function sendChatMessage() {
     var msgField = $("#chatMessage");
     var msg = {"action": "chat", "text": msgField.val()};
@@ -841,4 +996,29 @@ function onTrumpSelection(trump) {
     setGameDialogVisible($("#trumpDialog"), false);
     var msg = {"action": "setTrump", "value": trump};
     webSocket.send(JSON.stringify(msg));
+}
+
+function onBuy() {
+    resetUICards();
+    setGameDialogVisible($("#buyDialog"), false);
+    var msg = {"action": "buy", "cardIDs": selectedCards};
+    selectedCards = [];
+    webSocket.send(JSON.stringify(msg));
+}
+
+function onSkip() {
+    resetUICards();
+    setGameDialogVisible($("#buyDialog"), false);
+    var msg = {"action": "skip"};
+    selectedCards = [];
+    webSocket.send(JSON.stringify(msg));
+}
+
+function onPlayerMove() {
+    if (selectedCards.length === 1) {
+        resetUICards();
+        var msg = {"action": "move", cardID: selectedCards[0]};
+        selectedCards = [];
+        webSocket.send(JSON.stringify(msg));
+    }
 }

@@ -119,6 +119,16 @@ main {
 #webRadioBtn:active{
     opacity: 0.5;    
 }
+
+.controlPanelBtn{
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
+    cursor: pointer;
+}
+.controlPanelBtn:disabled{
+    cursor: default;
+}
+
 #attendeesPanel{
     position: fixed;
     background-image: url('./wood-small.jpg');
@@ -158,7 +168,7 @@ main {
     border-color: rgba(255,255,128,0.75);
 }
 .cardStack {
-    /*background-color: rgba(255,0,0, 0.5);*/
+    background-color: rgba(255,0,0, 0.5);
     display: flex;
     align-items: center;
     flex-grow: 1;
@@ -308,7 +318,7 @@ main {
     text-align: right;
 }
 
-#joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
+.gameDialog {
     text-align: center;
     background-color: rgba(0,0,0,0.6);
     color: white;
@@ -411,6 +421,7 @@ main {
     text-align: center;
 }
 
+
 /* Smart Phones und Tablets mit mittlerer Auflösung */
 @media all and (min-width: 50em) {
     body {
@@ -441,7 +452,7 @@ main {
     }
 
     .attendeeDesk, .moverDesk{
-        width:13.75em;
+        width:14.75em;
     }
     .attendeeName{
         margin-top: 0.5em;
@@ -451,12 +462,18 @@ main {
     }
     #chatArea{
         font-size: 0.9em;
-        height: 5em;
+        height: 4em;
     }
     #bottomPanel{
         padding: 0.4em;
     }
-    #joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
+
+    .controlPanelBtn{
+        margin-top: 0.5em;
+        margin-bottom: 0.5em;    
+    }
+
+    .gameDialog {
         background-color: rgba(0,0,0,0.75);
         font-size: 1.3em;
     }
@@ -536,7 +553,7 @@ main {
     }
 
     .attendeeDesk, .moverDesk{
-        width:14.95em;
+        width:16em;
     }
     .attendeeName{
         margin-top: 1em;
@@ -544,7 +561,13 @@ main {
     #bottomPanel{
         padding: 0.6em;
     }
-    #joinInOutDialog, #dealCardsDialog, #heartBlindDialog, #trumpDialog {
+
+    .controlPanelBtn{
+        margin-top: 0.4em;
+        margin-bottom: 0.4em;        
+    }
+
+    .gameDialog {
         font-size: 1.6em;
     }
 

@@ -11,11 +11,13 @@ public class MoveResult {
 
     public int cardID;
     public Card card;
-    public CardStack stack;
+    public CardStack playerStack;
+    public CardStack gameStack;
 
-    public MoveResult(int cardID, cardgame.Card card, List<cardgame.Card> stack) {
+    public MoveResult(int cardID, cardgame.Card card, List<cardgame.Card> playerStack, List<cardgame.Card> gameStack) {
         this.cardID = cardID;
         this.card = new Card(card);
-        this.stack = stack != null ? new PlayerStack(stack) : null;
+        this.playerStack = playerStack != null ? new PlayerStack(playerStack) : null;
+        this.gameStack = new PlayerStack(gameStack);
     }
 }

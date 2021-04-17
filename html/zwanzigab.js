@@ -136,7 +136,7 @@ function onLoginError(error) {
 }
 
 function onServerMessage(data) {
-    log("Message: " + (data));
+    log("Incomming Message: " + (data));
     var message = JSON.parse(data);
     switch (message.action) {
         case "playWebradio":
@@ -196,6 +196,16 @@ function onServerMessage(data) {
         case "trump":
             messageBuffer.push(function () {
                 onTrump(message);
+            });
+            break;
+        case "buyResult":
+            messageBuffer.push(function () {
+                onBuyResult(message);
+            });
+            break;
+        case "moveResult":
+            messageBuffer.push(function () {
+                onMoveResult(message);
             });
             break;
         case "ping":
