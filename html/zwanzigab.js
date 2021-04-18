@@ -208,6 +208,16 @@ function onServerMessage(data) {
                 onMoveResult(message);
             });
             break;
+        case "stackResult":
+            messageBuffer.push(function () {
+                onStackResult(message);
+            });
+            break;
+        case "roundResult":
+            messageBuffer.push(function () {
+                onRoundResult(message);
+            });
+            break;
         case "ping":
             // ignore
             break;

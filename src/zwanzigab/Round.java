@@ -22,6 +22,8 @@ public class Round {
     int stackCounter; // 1 to 5 (card stacks per round)
     Player dealer;
     Player trumper;
+    int stackColor;
+    Player stackStarter;
 
     final Queue<Player> remainingBuyers = new LinkedList<>();
     final Set<Player> skippers = new HashSet<>();
@@ -39,19 +41,31 @@ public class Round {
         this.dealer = dealer;
         this.trumper = game.getNextTo(dealer);
         skippers.clear();
-        stack.clear();
-        cardPlayerMap.clear();
+        clearStack();
         trump = null;
         stackCounter = 0;
         ++roundCounter;
     }
-
-    public boolean isLastStackMove() {
-        return stack.size() == (game.getAttendeesCount() - skippers.size());
+    
+    public void clearStack() {
+        stackStarter = null;
+        cardPlayerMap.clear();
+        stackColor = 0;
+        for (int i = 0; i < stack.size(); i++) {
+            stack.set(i, Card.GHOST);
+        }
     }
 
-    public void add(Card card, Player player) {
-        stack.add(card);
+    public boolean isLastStackMove() {
+        return cardPlayerMap.size() == (game.getAttendeesCount() - skippers.size());
+    }
+
+    public void add(Card card, Player player, int attendeeID) {
+        stack.set(attendeeID, card);
         cardPlayerMap.put(card, player);
+        if (stackColor == 0) {
+            stackColor = card.getColor();
+            stackStarter = player;
+        }
     }
 }

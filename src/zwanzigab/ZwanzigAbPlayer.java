@@ -34,6 +34,7 @@ public class ZwanzigAbPlayer extends Player {
      */
     @Override
     public void reset() {
+        resetRoundTokens();
         clearStack();
         resetSkipCount();
         gameTokens = 20;

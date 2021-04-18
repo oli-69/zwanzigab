@@ -1,3 +1,4 @@
+@font-face { font-family: 'TallyMark'; src: url('TallyMark.ttf') }
 
 /* Mobile first  */  
 body{
@@ -167,6 +168,15 @@ main {
     background-color: rgba(255,255,0,0.1);
     border-color: rgba(255,255,128,0.75);
 }
+
+.tallymarks{
+    font-family: "TallyMark";
+    font-weight: lighter;
+    font-size: 150%;
+    font-stretch: expanded;
+    margin-top: 0.3em;
+}
+
 .cardStack {
     background-color: rgba(255,0,0, 0.5);
     display: flex;
@@ -192,6 +202,7 @@ main {
     font-style: italic;
     text-align: center;
     flex-grow: 1;
+    margin-top: 0.3em;
 }
 
 #playerListPanel{
@@ -454,9 +465,7 @@ main {
     .attendeeDesk, .moverDesk{
         width:14.75em;
     }
-    .attendeeName{
-        margin-top: 0.5em;
-    }
+
     #bottomPanelMessage{    
         margin-bottom: 3em;
     }
@@ -555,9 +564,7 @@ main {
     .attendeeDesk, .moverDesk{
         width:16em;
     }
-    .attendeeName{
-        margin-top: 1em;
-    }
+
     #bottomPanel{
         padding: 0.6em;
     }

@@ -9,10 +9,12 @@ public class GamePhase {
     public String phase;
     public String actor;
     public boolean canSkip;
+    public int roundCounter;
 
-    public GamePhase(GAMEPHASE phase, Player actor, boolean canSkip) {
+    public GamePhase(GAMEPHASE phase, Player actor, boolean canSkip, int roundCounter) {
         this.phase = phase.name();
         this.actor = actor != null ? actor.getName() : "";
         this.canSkip = canSkip;
+        this.roundCounter = roundCounter;
     }
 }
