@@ -8,6 +8,7 @@ import cardgame.Player;
 import cardgame.SocketMessage;
 import cardgame.messages.AttendeeList;
 import cardgame.messages.AttendeeStacks;
+import cardgame.messages.PlayerList;
 import cardgame.messages.WebradioUrl;
 import com.google.gson.JsonArray;
 import java.awt.Image;
@@ -24,6 +25,8 @@ import javax.swing.ImageIcon;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import zwanzigab.messages.BuyResult;
+import zwanzigab.messages.GamePhase;
+import zwanzigab.messages.GameResult;
 import zwanzigab.messages.GameStateMessage;
 import zwanzigab.messages.MoveResult;
 import zwanzigab.messages.RoundResult;
@@ -48,6 +51,7 @@ public class ZwanzigAbGame extends CardGame {
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private Player gameStartDealer = null;
     private int gameCounter = 0;
+    private Player gameWinner;
 
     /**
      * Enumeration of the game phases.
@@ -115,7 +119,7 @@ public class ZwanzigAbGame extends CardGame {
         super(CARDS_32, conferenceName, webradioList);
         this.cardDealService = cardDealService;
         this.cardComparator = new CardComparator();
-        this.gameStackProperties = new GameStackProperties(gameStack, 0);
+        this.gameStackProperties = new GameStackProperties(gameStack, 0, 10, 10, 7);
         round = new Round(this, gameStack);
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
@@ -196,6 +200,7 @@ public class ZwanzigAbGame extends CardGame {
     @Override
     public void startGame() {
         if (gamePhase == GAMEPHASE.waitForAttendees) {
+            gameWinner = null;
             List<Player> offlineAttendees = new ArrayList<>();
             attendees.forEach((attendee) -> {
                 attendee.reset();
@@ -248,9 +253,16 @@ public class ZwanzigAbGame extends CardGame {
      * @return the game state for this player in JSON format
      */
     private GameStateMessage getGameStateMessage(Player player) {
-        return new GameStateMessage(gamePhase.name(), players, attendees, mover, round.dealer,
+        return new GameStateMessage(gamePhase.name(), players, attendees, mover, round.dealer, gameWinner,
                 gameStackProperties.getGameStack(), getAttendeeID(round.stackStarter), getAttendeeStackMap(player),
-                round.trump, canSkip(player), round.roundCounter, isWebradioPlaying(), getRadioUrl());
+                round.trump, canSkip(player), getAllowedMoves(player), round.roundCounter,
+                isWebradioPlaying(), getRadioUrl());
+    }
+
+    protected void sendGamePhaseToPlayers() {
+        getPlayerList().forEach(p -> {
+            p.getSocket().sendString(gson.toJson(new GamePhase(gamePhase, mover, canSkip(p), getAllowedMoves(p), getRound().roundCounter, gameWinner)));
+        });
     }
 
     @Override
@@ -285,11 +297,26 @@ public class ZwanzigAbGame extends CardGame {
             case "move":
                 processMove(player, message);
                 break;
+            case "confirmGameOver":
+                processConfirmGameOver(player, message);
+                break;
             case "chat":
                 chat(message.jsonObject.get("text").getAsString(), player);
                 break;
             default:
                 LOGGER.warn("Unknown message from player '" + player.getName() + "': '" + message.jsonString);
+        }
+    }
+
+    private void processConfirmGameOver(Player player, SocketMessage message) {
+        if (player.equals(mover)) {
+            if (gamePhase == GAMEPHASE.gameOver) {
+                setGamePhase(GAMEPHASE.waitForAttendees);
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.gameOver));
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
         }
     }
 
@@ -529,16 +556,15 @@ public class ZwanzigAbGame extends CardGame {
 
                 // end of game?
                 if (attendees.stream().anyMatch((player) -> (player.getGameTokens() <= 0))) {
-                    // TODO
-                    Player winner = findWinner();
+                    gameWinner = findWinner();
                     for (Player player : attendees) {
-                        if (player.getGameTokens() > 0 && !player.equals(winner)) {
-                            winner.addTotalTokens(player.getGameTokens());
+                        if (player.getGameTokens() > 0 && !player.equals(gameWinner)) {
+                            gameWinner.addTotalTokens(player.getGameTokens());
                             player.addTotalTokens(-player.getGameTokens());
                         }
                     }
+                    sendToPlayers(gson.toJson(new GameResult(new PlayerList(players))));
                     setGamePhase(GAMEPHASE.gameOver);
-                    setGamePhase(GAMEPHASE.waitForAttendees);
                 } else {
                     // start next round
                     initRound(round.trumper);
@@ -615,6 +641,18 @@ public class ZwanzigAbGame extends CardGame {
         // buy-phase has ended
         mover = round.trumper;
         setGamePhase(GAMEPHASE.waitForPlayerMove);
+    }
+
+    public Integer[] getAllowedMoves(Player player) {
+        List<Integer> allowedMoves = new ArrayList<>();
+        if (gamePhase == GAMEPHASE.waitForPlayerMove && player.equals(mover)) {
+            for (int i = 0; i < player.getStack().size(); i++) {
+                if (isValidMove(player, i)) {
+                    allowedMoves.add(i);
+                }
+            }
+        }
+        return allowedMoves.toArray(new Integer[allowedMoves.size()]);
     }
 
     public boolean canSkip(Player player) {

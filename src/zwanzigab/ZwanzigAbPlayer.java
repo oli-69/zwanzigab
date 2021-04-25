@@ -37,7 +37,7 @@ public class ZwanzigAbPlayer extends Player {
         resetRoundTokens();
         clearStack();
         resetSkipCount();
-        gameTokens = 20;
+        gameTokens = 5;
     }
 
 }

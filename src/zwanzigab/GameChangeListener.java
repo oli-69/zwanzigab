@@ -9,8 +9,6 @@ import com.google.gson.Gson;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.List;
-import zwanzigab.ZwanzigAbGame.GAMEPHASE;
-import zwanzigab.messages.GamePhase;
 
 /**
  *
@@ -56,23 +54,8 @@ public class GameChangeListener implements PropertyChangeListener {
                 game.sendToPlayers(gson.toJson(new PlayerOnline(player)));
                 break;
             case CardGame.PROP_GAMEPHASE:
-                processGamePhase(evt);
+                game.sendGamePhaseToPlayers();
                 break;
         }
-    }
-
-    private GamePhase getMessageForPhase(GAMEPHASE phase) {
-        Player actor = game.getMover();
-//        switch (phase) {
-//            case shuffle:
-                return new GamePhase(phase, actor, game.canSkip(actor), game.getRound().roundCounter);
-//            default:
-//                return new GamePhase(phase, actor);
-//        }
-    }
-
-    private void processGamePhase(PropertyChangeEvent evt) {
-        GAMEPHASE phase = (GAMEPHASE) evt.getNewValue();
-        game.sendToPlayers(gson.toJson(getMessageForPhase(phase)));
     }
 }

@@ -62,7 +62,10 @@
                     </div>
                 </div>
                 <div id="controlPanel">
-                    <input type="button" id="skipBtn" class="controlPanelBtn" value="Aussetzen" onclick="skipRound()"  disabled /> 
+                    <input type="button" id="skipBtn" class="controlPanelBtn" value="Aussetzen" onclick="skipRound()" /> 
+                    <input type="button" id="playCardBtn" class="controlPanelBtn" value="Ausspielen" onclick="playCard()" /> 
+                    <div id="confirmMoveContainer"><input type="checkbox" id="confirmMove" onclick="confirmMoveChanged()" checked /> 
+                    <label for="confirmMove" onclick="toggleConfirmMove()">Best&auml;tigen</label></div>
                 </div>
                 <div id="joinInOutDialog" class="gameDialog">
                     <div>Neues Spiel. Warte auf Mitspieler...</div><br>
@@ -90,6 +93,13 @@
                 <div id="buyDialog" class="gameDialog">
                     <div>Karten zum Tauschen w&auml;hlen</div><br>
                     <input type="button" class="dialogButton" value="Weiter" onclick="onBuy()" />
+                </div>
+                <div id="buyResultDialog" class="gameDialog">
+                    <div id="buyResultDialogMessage"></div><br>
+                </div>
+                <div id="gameOverDialog" class="gameDialog">
+                    <div id="gameOverMessage"></div><br>
+                    <input type="button" id="confirmGameOverBtn" class="dialogButton" value="Weiter" onclick="onConfirmGameOver()" />
                 </div>
             </div>
 
@@ -128,8 +138,8 @@
         <script>
             $(document).ready(function () {
                 onDocumentReady();
-                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "testUser");
-                $("#pPwd").val("123456");
+                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "Oli");
+                $("#pPwd").val((navigator.userAgent.indexOf("Firefox") > -1) ? "123456" : "games");
 //                login();
 //                if (!true) {
 //                    setTimeout(function () {

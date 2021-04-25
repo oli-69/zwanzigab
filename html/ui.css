@@ -307,7 +307,7 @@ main {
     color: white;
 
     display: grid;
-    grid-template-columns: auto auto auto; 
+    grid-template-columns: auto auto auto auto; 
 }
 
 .scoreboardEntryName{
@@ -327,6 +327,17 @@ main {
     margin-left: 0.25em;
     margin-right: 0.5em;
     text-align: right;
+    min-width: 1.25em;
+}
+
+.scoreboardEntrySkips{
+    font-family: "TallyMark";
+    font-weight: lighter;
+    font-stretch: expanded;
+    min-width: 0.8em;
+    margin-top: 0.2em;
+    margin-bottom: 0.1em;
+    margin-right: 0.5em;
 }
 
 .gameDialog {
@@ -344,6 +355,10 @@ main {
     left: 50%;
     transform: translate(-50%, 0);
     padding: 1em;
+}
+
+#joinInOutDialog, #gameOverDialog{
+    background-color: rgba(0,0,0,0.8);
 }
 
 #trumpDlgSelectionOuter{

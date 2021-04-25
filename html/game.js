@@ -20,9 +20,11 @@ var messageInProgress;
 var webradioStateLoaded = false; // get webradio state only the first time 
 var selectedCards = [];
 var canSkip;
+var allowedMoves;
 var scoreboard;
 var roundInfo;
 var roundCounter;
+var gameWinner;
 
 function onDocumentReady() {
     $("#loginConsole").text("Anmeldung vorbereiten...");
@@ -39,6 +41,9 @@ function onDocumentReady() {
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#heartBlindDialog"), false);
     setGameDialogVisible($("#trumpDialog"), false);
+    setGameDialogVisible($("#gameOverDialog"), false);
+    setGameDialogVisible($("#buyDialog"), false);
+    setGameDialogVisible($("#buyResultDialog"), false);
 
     // connect the enter key to the input fields.
     $('#pName').focus();
@@ -73,6 +78,7 @@ function onMessageBuffer() {
     while (!messageInProgress && messageBuffer.length > 0) {
         messageInProgress = true;
         var action = messageBuffer.shift();
+        log("Starting action " + action + " (" + messageBuffer.length + " messages left)");
         try {
             action();
         } catch (e) {
@@ -92,11 +98,13 @@ function onGameState(message) {
     dealer = message.dealer;
     trump = message.trump;
     canSkip = message.canSkip;
+    allowedMoves = message.allowedMoves;
     gameStack = message.gameStack.cards;
     stackStarterId = message.stackStarterId;
     gameStackOffsets = message.gameStack.offset;
     gameStackRotations = message.gameStack.rotation;
     roundCounter = message.roundCounter;
+    gameWinner = message.gameWinner;
     parseAttendeeStacks(message.attendeeStacks);
     updatePlayerList();
     updateAttendeeList();
@@ -114,7 +122,9 @@ function onGamePhaseMessage(message) {
     gamePhase = message.phase;
     mover = message.actor;
     canSkip = message.canSkip;
+    allowedMoves = message.allowedMoves;
     roundCounter = message.roundCounter;
+    gameWinner = message.gameWinner;
     var readyFunction = function () {
         onGamePhase(gamePhase);
         onMessageBuffer();
@@ -139,9 +149,12 @@ function onGamePhaseMessage(message) {
             readyFunction();
             break;
         case "buy":
+        case "waitForPlayerMove":
+        case "gameOver":
             readyFunction();
             break;
-        case "waitForPlayerMove":
+        default:
+            log("WARNING: unknown gamePhase: '" + gamePhase + "'");
             readyFunction();
             break;
     }
@@ -151,11 +164,15 @@ function onGamePhase(phase) {
     log("onGamePhase: " + phase);
     var isWaitForAttendees = (phase === "waitForAttendees");
     var meIsMover = (mover === myName);
-    var meIsMoverInGame = ((phase === "buy") && meIsMover);
+    var isWaitForPlayerMove = phase === "waitForPlayerMove";
+    var isBuy = phase === "buy";
+
+    $("#gameOverMessage").html(gameWinner + " hat gewonnen");
     setGameDialogVisible($("#joinInOutDialog"), isWaitForAttendees);
     setGameDialogVisible($("#heartBlindDialog"), meIsMover && phase === "shuffle");
     setGameDialogVisible($("#trumpDialog"), meIsMover && phase === "deal3cards");
     setGameDialogVisible($("#buyDialog"), meIsMover && phase === "buy");
+    setGameDialogVisible($("#gameOverDialog"), phase === "gameOver");
     initDialogButtons();
 
     // reset all card selections and hovers
@@ -175,12 +192,25 @@ function onGamePhase(phase) {
     updateAttendeeDeskColor();
 
     // Control Panel
-    if (meIsMoverInGame) {
+    if (meIsMover && (isBuy || isWaitForPlayerMove)) {
         controlPanel.show();
     } else {
         controlPanel.hide();
     }
+    if (meIsMover && isWaitForPlayerMove) {
+        $("#playCardBtn").show();
+        $("#confirmMoveContainer").show();
+    } else {
+        $("#playCardBtn").hide();
+        $("#confirmMoveContainer").hide();
+    }
+    if (meIsMover && isBuy) {
+        $("#skipBtn").show();
+    } else {
+        $("#skipBtn").hide();
+    }
     $("#skipBtn").prop("disabled", !canSkip);
+    $("#playCardBtn").prop("disabled", !($("#confirmMove").prop("checked") && selectedCards.length === 1))
 //    $("#logoffBtn").prop("disabled", !(isWaitForAttendees && isActive));
 
     selectedCards = [];
@@ -198,11 +228,11 @@ function initDialogButtons() {
         $("#removeFromAttendeesBtn").prop("disabled", (myId < 0));
     }
     if (meIsMover) {
-        $("#nextRoundBtn").show();
         $("#startGameBtn").prop("disabled", attendees === null || attendees === undefined || attendees.length < 2);
+        $("#confirmGameOverBtn").show();
     } else {
-        $("#nextRoundBtn").hide();
         $("#startGameBtn").prop("disabled", true);
+        $("#confirmGameOverBtn").hide();
     }
 }
 
@@ -320,16 +350,30 @@ function onTrump(message) {
 }
 
 function onBuyResult(message) {
+    var messageDialog = $("#buyResultDialog");
+    var messageField = $("#buyResultDialogMessage");
     var readyFunction = function () {
         messageInProgress = false;
         onMessageBuffer();
     };
-    if (message.cardIDs !== undefined && message.cardIDs !== null && message.cardIDs.length > 0) {
+    if (message.skip) {
+        mover.skipCount++;
+        messageField.html((mover === myName ? "Du" : mover) + " setzt aus");
+        animateGameDialog(messageDialog);
+        animateDropCards([0, 1, 2, 3, 4], function () {
+            attendeeStacks[getAttendeeIdByName(mover)] = [];
+            readyFunction();
+        });
+    } else if (message.cardIDs !== undefined && message.cardIDs !== null && message.cardIDs.length > 0) {
+        messageField.html((mover === myName ? "Du nimmst " : (mover + " nimmt ")) + message.cardIDs.length + " Karten");
+        animateGameDialog(messageDialog);
         animateDropCards(message.cardIDs, function () {
             animateDealBuyCards(message.cardIDs, message.stack, readyFunction);
         });
     } else {
-        readyFunction();
+        messageField.html((mover === myName ? "Du nimmst " : (mover + " nimmt ")) + "keine Karten");
+        animateGameDialog(messageDialog);
+        readyFunction(); // next attendee
     }
 }
 
@@ -350,6 +394,7 @@ function onMoveResult(message) {
         messageInProgress = false;
         onMessageBuffer();
     };
+    sound.click.play();
     animatePlayCard(moverID, message.cardID, message.card, readyFunction);
 }
 
@@ -375,6 +420,15 @@ function onRoundResult(message) {
     };
     attendees = message.attendees.attendees;
     animateRoundResult(readyFunction);
+}
+
+function onGameResult(message) {
+    var readyFunction = function () {
+        messageInProgress = false;
+        onMessageBuffer();
+    };
+    players = message.players.players;
+    animateGameResult(readyFunction);
 }
 
 function logStack(name, stack) {
@@ -423,7 +477,8 @@ function updateRoundInfo() {
         $("#roundCounter").html("" + roundCounter);
         var trumpHtml = "";
         if (trump !== undefined && trump !== null) {
-            trumpHtml = "<div class='trumpSymbol" + cardColorToString(trump.color) + "'>" + (trump.blind ? "x2" : "") + "</div>";
+            var factor = trump.color === HERZ ? (trump.blind ? "x4" : "x2") : "";
+            trumpHtml = "<div class='trumpSymbol" + cardColorToString(trump.color) + "'>" + factor + "</div>";
         }
         $("#trumpSymbolContainer").html(trumpHtml);
     }
@@ -440,6 +495,8 @@ function updateScoreboard() {
                     attendees[i].name +
                     "</div><div class='scoreboardEntryColon'>:</div><div class='scoreboardEntryScore'>" +
                     attendees[i].gameTokens +
+                    "</div><div class='scoreboardEntrySkips'>" +
+                    getTallymarks(attendees[i].skipCount) +
                     "</div>"
                     );
         }
@@ -528,13 +585,12 @@ function createAttendeeDesk(player, stackDesk) {
     var playerDesk = $("<div class='attendeeDesk'></div>");
     var nameContainer = $("<div class='attendeeNameContainer'></div>");
     var nameDiv = $("<div class='attendeeName'>" + player.name + "</div>");
-    var tallymarks = player.roundTokens > 0 ? "&#" + (96 + player.roundTokens) + ";" : "";
+    var tallymarks = getTallymarks(player.roundTokens);
     nameContainer.append(nameDiv);
     nameContainer.append($("<div class='tallymarks'>" + tallymarks + "</div>"));
     playerDesk.append(stackDesk).append(nameContainer);
     return playerDesk;
 }
-
 
 function emptyAllStackDesks() {
     for (var i = 0; i < attendeeStacks.length; i++) {
@@ -614,6 +670,11 @@ function updateGameStack() {
     } catch (e) {
         log("Fehler in updateGameStack(): '" + e + "'");
     }
+}
+
+
+function getTallymarks(value) {
+    return value > 0 ? "&#" + (96 + value) + ";" : "";
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -792,7 +853,7 @@ function getRotationDegrees(obj) {
             obj.css("-ms-transform") ||
             obj.css("-o-transform") ||
             obj.css("transform");
-    if (matrix !== 'none') {
+    if (matrix !== undefined && matrix !== 'none') {
         var values = matrix.split('(')[1].split(')')[0].split(',');
         var a = values[0];
         var b = values[1];
@@ -863,9 +924,11 @@ function animateDropCards(cardIDs, readyFunction) {
     var myId = getMyAttendeeId();
     var id = getAttendeeIdByName(mover);
     var childs = attendeesCardStacks[id].children();
+    var gameDesk = $("#gameStack");
+    var gdOffset = gameDesk.offset();
     var dstPos = {
-        y: -shufflingCard.height(),
-        x: -shufflingCard.width(),
+        y: gdOffset.top + 0.5 * (gameDesk.height() - $(childs[0]).height()),
+        x: gdOffset.left + 0.5 * (gameDesk.width() - $(childs[0]).width()),
         r: 0
     };
     for (var i = 0; i < cardIDs.length; i++) {
@@ -972,6 +1035,17 @@ function animateRoundResult(readyFunction) {
     animateScale(scoreboard, 1.0, sized, animTime, loopback);
 }
 
+function animateGameResult(readyFunction) {
+    var animTime = 500;
+    var sized = 1.5;
+    var panel = $("#playerListPanel");
+    panel.css("transform-origin", "50% 0%");
+    var loopback = function () {
+        animateScale(panel, sized, 1.0, animTime, readyFunction);
+    }
+    animateScale(panel, 1.0, sized, animTime, loopback);
+}
+
 function animateScale(element, srcScale, dstScale, animTime, readyFunction) {
     element.prop("scaleVal", srcScale);
     element.css("transform", "scale(" + srcScale + ")");
@@ -981,7 +1055,7 @@ function animateScale(element, srcScale, dstScale, animTime, readyFunction) {
             if (tween.prop === "scaleVal") {
                 element.css("transform", "scale(" + now + ")");
             }
-        }
+        },
     };
 
     if (typeof readyFunction === "function") {
@@ -1078,16 +1152,43 @@ function processCardClick(uiCard) {
                     }
                     break;
                 case "waitForPlayerMove":
-                    selectedCards = [];
-                    card.setSelected(!(card.selected));
                     if (card.selected) {
-                        selectedCards.push(cardId);
+                        selectedCards = [];
+                        card.setSelected(false);
+                    } else {
+                        if (selectedCards.length > 0) {
+                            getSvgCard(attendeeStacks[myId][selectedCards[0]]).setSelected(false);
+                        }
+                        selectedCards[0] = cardId;
+                        card.setSelected(true);
                     }
-                    onPlayerMove();
+                    $("#playCardBtn").prop("disabled", !($("#confirmMove").prop("checked") && selectedCards.length === 1))
+                    if ($("#playCardBtn").prop("disabled") === true) {
+                        onPlayerMove();
+                    }
                     break;
             }
         }
     }
+}
+
+function confirmMoveChanged() {
+    $("#playCardBtn").prop("disabled", !($("#confirmMove").prop("checked") && selectedCards.length === 1));
+}
+
+function toggleConfirmMove() {
+    var checkBox = $("#confirmMove");
+    checkBox.prop("checked", (checkBox.prop("checked")));
+    confirmMoveChanged();
+}
+
+function playCard() {
+    onPlayerMove();
+}
+
+function skipRound() {
+    var msg = {"action": "skip"};
+    webSocket.send(JSON.stringify(msg));
 }
 
 function sendChatMessage() {
@@ -1147,9 +1248,18 @@ function onSkip() {
 
 function onPlayerMove() {
     if (selectedCards.length === 1) {
-        resetUICards();
-        var msg = {"action": "move", cardID: selectedCards[0]};
-        selectedCards = [];
-        webSocket.send(JSON.stringify(msg));
+        if (allowedMoves.includes(selectedCards[0])) {
+            resetUICards();
+            var msg = {"action": "move", cardID: selectedCards[0]};
+            selectedCards = [];
+            webSocket.send(JSON.stringify(msg));
+        } else {
+            log("TODO: Sound");
+        }
     }
+}
+
+function onConfirmGameOver() {
+    var msg = {"action": "confirmGameOver"};
+    webSocket.send(JSON.stringify(msg));
 }

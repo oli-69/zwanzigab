@@ -218,6 +218,11 @@ function onServerMessage(data) {
                 onRoundResult(message);
             });
             break;
+        case "gameResult":
+            messageBuffer.push(function () {
+                onGameResult(message);
+            });
+            break;
         case "ping":
             // ignore
             break;

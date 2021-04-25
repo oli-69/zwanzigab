@@ -26,11 +26,13 @@ public class GameStateMessage {
     public WebradioUrl radioUrl;
     public Trump trump;
     public boolean canSkip;
+    public Integer[] allowedMoves;
     public int roundCounter;
+    public String gameWinner;
 
-    public GameStateMessage(String phase, List<Player> players, List<Player> attendees, Player mover, Player dealer,
+    public GameStateMessage(String phase, List<Player> players, List<Player> attendees, Player mover, Player dealer, Player gameWinner,
             GameStack gameStack, int stackStarterId, Map<Integer, List<Card>> stackMap, Trump trump, boolean canSkip,
-            int roundCounter, boolean webradioPlaying, WebradioUrl radioUrl) {
+            Integer[] allowedMoves, int roundCounter, boolean webradioPlaying, WebradioUrl radioUrl) {
         this.phase = phase;
         this.playerList = new PlayerList(players);
         this.attendeeList = new AttendeeList(attendees, mover);
@@ -43,6 +45,8 @@ public class GameStateMessage {
         this.radioUrl = radioUrl;
         this.trump = trump;
         this.canSkip = canSkip;
+        this.allowedMoves = allowedMoves;
         this.roundCounter = roundCounter;
+        this.gameWinner = gameWinner != null ? gameWinner.getName() : null;
     }
 }
