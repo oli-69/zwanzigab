@@ -326,6 +326,7 @@ function onSortedStack(message) {
         }
     };
     var srcProps;
+    sound.sort.play();
     for (var i = 0; i < srcStack.length; i++) {
         card = $(childs[i]);
         srcProps = getCardAnimProps(card);
@@ -345,6 +346,11 @@ function onTrump(message) {
     if (trump !== undefined && trump !== null && trump.value > 0) {
         animateNextCardTrump({color: trump.color, value: trump.value}, trump.dt, animateTrumpFunction);
     } else {
+        if (trump.blind) {
+            sound.knock.play();
+        } else if (trump.value === 0) {
+            sound.trump.play();
+        }
         animateTrumpFunction();
     }
 }
@@ -371,9 +377,9 @@ function onBuyResult(message) {
             animateDealBuyCards(message.cardIDs, message.stack, readyFunction);
         });
     } else {
+        sound.pass.play();
         messageField.html((mover === myName ? "Du nimmst " : (mover + " nimmt ")) + "keine Karten");
-        animateGameDialog(messageDialog);
-        readyFunction(); // next attendee
+        animateGameDialog(messageDialog, readyFunction);
     }
 }
 
@@ -906,6 +912,8 @@ function animateNextCardTrump(card, discoverTime, readyFunction) {
     };
     var discover = function () {
         setTimeout(function () {
+            $(sound.tension).animate({volume: 0}, 2000);
+            sound.dealBuy[0].play();
             var cardObj = $(getSvgCard(card).getUI().clone());
             cardObj.css("position", "fixed");
             cardObj.css("top", props.y);
@@ -916,6 +924,11 @@ function animateNextCardTrump(card, discoverTime, readyFunction) {
             setTimeout(readyFunction, 600);
         }, discoverTime);
     };
+    if (discoverTime > 1000) {
+        sound.tension.volume = 0;
+        sound.tension.play();
+        $(sound.tension).animate({volume: 1}, 3000);
+    }
     gameStack.append(shufflingCard);
     animateSingleCard(shufflingCard, srcPos.top, srcPos.left, 0, props, 0, 2000, discover);
 }
@@ -942,6 +955,7 @@ function animateDropCards(cardIDs, readyFunction) {
             oldCard = newCard;
         }
         var isLastCard = i === (cardIDs.length - 1);
+        sound.dropcards.play();
         animateSingleCard(oldCard, srcProps.y, srcProps.x, srcProps.r, dstPos, 0, 1500, isLastCard ? readyFunction : undefined);
     }
 }
@@ -969,6 +983,7 @@ function animateDealBuyCards(cardIDs, stack, readyFunction) {
         var cardID = cardIDs[i];
         var isLastCard = i === (cardIDs.length - 1);
         var card = $(childs[cardID]);
+        sound.dealBuy[cardIDs.length - 1].play();
         animateDealSingleCard(card, srcPos.top, srcPos.left, dstProps[i], i * 750, isLastCard ? readyFunction : undefined);
     }
 }

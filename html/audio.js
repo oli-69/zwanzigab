@@ -7,7 +7,17 @@ function SoundFiles() {
     this.offline = new Audio();
     this.shuffle = new Audio();
     this.deal = new Audio();
+    this.dealBuy = [];
+    this.dealBuy[0] = new Audio();
+    this.dealBuy[1] = new Audio();
+    this.dealBuy[2] = new Audio();
+    this.tension = new Audio();
     this.click = new Audio();
+    this.trump = new Audio();
+    this.knock = new Audio();
+    this.pass = new Audio();
+    this.sort = new Audio();
+    this.dropcards = new Audio();
     this.finishSound = [];
     this.finishSound.length = 0;
     for (var i = 0; i < this.finishSound.length; i++) {
@@ -25,7 +35,16 @@ function initAudio(readyFunction) {
         initSound(sound.offline);
         initSound(sound.shuffle);
         initSound(sound.deal);
+        initSound(sound.dealBuy[0]);
+        initSound(sound.dealBuy[1]);
+        initSound(sound.dealBuy[2]);
+        initSound(sound.tension);
         initSound(sound.click);
+        initSound(sound.trump);
+        initSound(sound.knock);
+        initSound(sound.pass);
+        initSound(sound.sort);
+        initSound(sound.dropcards);
         for (var i = 0; i < sound.finishSound.length; i++) {
             initSound(sound.finishSound[i]);
         }
@@ -55,7 +74,16 @@ function loadAudio(readyFunction) {
     sound.offline.src = 'snd-offline.mp3';
     sound.shuffle.src = 'snd-shuffle.mp3';
     sound.deal.src = 'snd-deal.mp3';
+    sound.dealBuy[0].src = 'snd-deal1.mp3';
+    sound.dealBuy[1].src = 'snd-deal2.mp3';
+    sound.dealBuy[2].src = 'snd-deal3.mp3';
+    sound.tension.src = 'snd-tension.mp3';
     sound.click.src = 'snd-click.mp3';
+    sound.trump.src = 'snd-trump.mp3';
+    sound.knock.src = 'snd-knock.mp3';
+    sound.pass.src = 'snd-pass.mp3';
+    sound.sort.src = 'snd-sort.mp3';
+    sound.dropcards.src = 'snd-dropcards.mp3';
     for (var i = 0; i < sound.finishSound.length; i++) {
         sound.finishSound[i].src = 'finish/snd-finish-' + ((i < 10) ? "0" : "") + i + '.mp3';
     }
@@ -73,7 +101,7 @@ function setWebRadioUrl(url) {
     console.log("setWebRadioUrl: " + url);
     if (url !== undefined && url !== null && url !== radioUrl) {
         radioUrl = url;
-        if(!sound.radio.paused) {
+        if (!sound.radio.paused) {
             // restart the radio
             toogleWebRadio();
             toogleWebRadio();
