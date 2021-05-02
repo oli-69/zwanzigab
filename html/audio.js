@@ -1,6 +1,11 @@
 var sound;
 var radioUrl = "https://onlineradiobox.com/json/de/radioseefunk/play?platform=web"; // fallback
 
+// following two lines removes (however) the audio delay on Safari (MacOS/iOS)
+// https://stackoverflow.com/questions/9811429/html5-audio-tag-on-safari-has-a-delay
+var AudioContext = window.AudioContext || window.webkitAudioContext;
+var audioCtx = new AudioContext();
+
 function SoundFiles() {
     this.chat = new Audio();
     this.online = new Audio();
@@ -12,12 +17,17 @@ function SoundFiles() {
     this.dealBuy[1] = new Audio();
     this.dealBuy[2] = new Audio();
     this.tension = new Audio();
+    this.startround = new Audio();
     this.click = new Audio();
     this.trump = new Audio();
-    this.knock = new Audio();
+    this.hblind = new Audio();
     this.pass = new Audio();
     this.sort = new Audio();
     this.dropcards = new Audio();
+    this.wrong = new Audio();
+    this.points = new Audio();
+    this.cash = new Audio();
+    this.gameover = new Audio();
     this.finishSound = [];
     this.finishSound.length = 0;
     for (var i = 0; i < this.finishSound.length; i++) {
@@ -39,12 +49,17 @@ function initAudio(readyFunction) {
         initSound(sound.dealBuy[1]);
         initSound(sound.dealBuy[2]);
         initSound(sound.tension);
+        initSound(sound.startround);
         initSound(sound.click);
         initSound(sound.trump);
-        initSound(sound.knock);
+        initSound(sound.hblind);
         initSound(sound.pass);
         initSound(sound.sort);
         initSound(sound.dropcards);
+        initSound(sound.wrong);
+        initSound(sound.points);
+        initSound(sound.cash);
+        initSound(sound.gameover);
         for (var i = 0; i < sound.finishSound.length; i++) {
             initSound(sound.finishSound[i]);
         }
@@ -78,12 +93,17 @@ function loadAudio(readyFunction) {
     sound.dealBuy[1].src = 'snd-deal2.mp3';
     sound.dealBuy[2].src = 'snd-deal3.mp3';
     sound.tension.src = 'snd-tension.mp3';
+    sound.startround.src = 'snd-startround.mp3';
     sound.click.src = 'snd-click.mp3';
     sound.trump.src = 'snd-trump.mp3';
-    sound.knock.src = 'snd-knock.mp3';
+    sound.hblind.src = 'snd-hblind.mp3';
     sound.pass.src = 'snd-pass.mp3';
     sound.sort.src = 'snd-sort.mp3';
     sound.dropcards.src = 'snd-dropcards.mp3';
+    sound.wrong.src = 'snd-wrong.mp3';
+    sound.points.src = 'snd-points.mp3';
+    sound.cash.src = 'snd-cash.mp3';
+    sound.gameover.src = 'snd-gameover.mp3';
     for (var i = 0; i < sound.finishSound.length; i++) {
         sound.finishSound[i].src = 'finish/snd-finish-' + ((i < 10) ? "0" : "") + i + '.mp3';
     }

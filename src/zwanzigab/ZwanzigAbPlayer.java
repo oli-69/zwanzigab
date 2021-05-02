@@ -14,8 +14,7 @@ public class ZwanzigAbPlayer extends Player {
      * @param name name of the player.
      */
     public ZwanzigAbPlayer(String name) {
-        super(name);
-        gameTokens = 20;
+        this(name, null);
     }
 
     /**
@@ -37,7 +36,7 @@ public class ZwanzigAbPlayer extends Player {
         resetRoundTokens();
         clearStack();
         resetSkipCount();
-        gameTokens = 5;
+        gameTokens = 20;
     }
 
 }

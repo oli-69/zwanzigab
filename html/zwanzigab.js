@@ -203,6 +203,11 @@ function onServerMessage(data) {
                 onBuyResult(message);
             });
             break;
+        case "startRound":
+            messageBuffer.push(function () {
+                onStartRound(message);
+            });
+            break;
         case "moveResult":
             messageBuffer.push(function () {
                 onMoveResult(message);

@@ -21,6 +21,7 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 import zwanzigab.ZwanzigAbGame.GAMEPHASE;
 import zwanzigab.messages.GamePhase;
+import zwanzigab.messages.StackResult;
 
 /**
  * Tests for class ZwanzigAbGame
@@ -83,6 +84,30 @@ public class ZwanzigAbGameTest {
     }
 
     @Test
+    public void testStackWinner() {
+        int trump = Card.HERZ;
+        startWith2Players();
+        socket2.onText("{\"action\": \"heartBlind\", \"value\": \"false\"}");
+        socket2.onText("{\"action\": \"setTrump\", \"value\": \"" + trump + "\"}");
+        socket2.onText("{\"action\": \"buy\", \"cardIDs\": [0]}");
+        socket1.onText("{\"action\": \"buy\", \"cardIDs\": [0]}");
+        assertEquals(GAMEPHASE.waitForPlayerMove, game.getGamePhase());
+        assertEquals(player2, game.getMover());
+        player1.getStack().clear();
+        player2.getStack().clear();
+        player1.getStack().add(new Card(Card.KREUZ, 8));
+        player2.getStack().add(new Card(Card.PIK, 7));
+
+        // when
+        socket2.onText("{\"action\": \"move\", \"cardID\": 0}");
+        socket1.onText("{\"action\": \"move\", \"cardID\": 0}");
+        
+        // then
+        StackResult result = gson.fromJson( socket1.getMessage("stackResult"), StackResult.class );
+        assertEquals("stack winner id", 1, result.stackWinnerId); // player2 must hade made it
+    }
+
+    @Test
     public void testMove() {
         int trump = 1;
         startWith3Players();
@@ -92,8 +117,8 @@ public class ZwanzigAbGameTest {
         socket2.onText("{\"action\": \"buy\", \"cardIDs\": [0]}");
         socket3.onText("{\"action\": \"skip\"}");
         socket1.onText("{\"action\": \"buy\", \"cardIDs\": [0]}");
-        assertEquals(GAMEPHASE.waitForPlayerMove, game.getGamePhase()); // still buy phase
-        assertEquals(player2, game.getMover()); // mover has not stepped
+        assertEquals(GAMEPHASE.waitForPlayerMove, game.getGamePhase());
+        assertEquals(player2, game.getMover());
         socket2.onText("{\"action\": \"move\", \"cardID\": 0}");
     }
 
@@ -394,6 +419,15 @@ public class ZwanzigAbGameTest {
 
         public boolean receivedMessage(String message) {
             return messageBuff.stream().anyMatch((msg) -> (message.equals(msg)));
+        }
+
+        public String getMessage(String action) {
+            for (String message : messageBuff) {
+                if (message.contains("\"action\":\"" + action + "\"")) {
+                    return message;
+                }
+            }
+            return null;
         }
     }
 
