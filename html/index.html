@@ -40,6 +40,7 @@
                 <div id="attendeesPanel"></div>
                 <div id="gameDesk"><div id="gameStack" class="cardStack"></div></div>
                 <div id="playerListPanel"></div>
+                <div id="helpButton" onclick="onOpenHelp()"></div>
                 <div id="roundInfo">
                     <div class="roundInfoItem">Runde:<div id="roundCounter">1</div></div>
                     <div class="roundInfoItem"><div id="trumpSymbolContainer"></div></div>
@@ -65,7 +66,7 @@
                     <input type="button" id="skipBtn" class="controlPanelBtn" value="Aussetzen" onclick="skipRound()" /> 
                     <input type="button" id="playCardBtn" class="controlPanelBtn" value="Ausspielen" onclick="playCard()" /> 
                     <div id="confirmMoveContainer"><input type="checkbox" id="confirmMove" onclick="confirmMoveChanged()" checked /> 
-                    <label for="confirmMove" onclick="toggleConfirmMove()">Best&auml;tigen</label></div>
+                        <label for="confirmMove" onclick="toggleConfirmMove()">Best&auml;tigen</label></div>
                 </div>
                 <div id="joinInOutDialog" class="gameDialog">
                     <div>Neues Spiel. Warte auf Mitspieler...</div><br>
@@ -104,6 +105,54 @@
                     <div id="gameOverMessage"></div><br>
                     <input type="button" id="confirmGameOverBtn" class="dialogButton" value="Weiter" onclick="onConfirmGameOver()" />
                 </div>
+                <div id="helpWindow">
+                    <div id="helpWindowContent">
+                        <div style="text-align:center"><h1>Spielanleitung</h1></div>
+                        <p>Das Ziel bei Zwanzig ab liegt darin, das Punktekonto, welches zu Beginn mit 20 Punkten gefüllt ist, bis auf Null abzubauen. Dabei gilt es, möglichst viele Stiche zu erzielen, denn für jeden einzelnen davon gibt es Minuspunkte.</p>
+                        <h2>Der Kartenwert bei Zwanzig ab</h2>
+                        <p>Die verschiedenen Karten haben einen unterschiedlichen Wert. Die Reihenfolge der Wertigkeit von oben nach unten sieht folgendermaßen aus:</p>
+                        <ol>
+                            <li>Ass
+                            <li>Zehn
+                            <li>König
+                            <li>Dame
+                            <li>Bube
+                            <li>Neun
+                            <li>Acht
+                            <li>Sieben
+                        </ol>
+                        <p>Ein Ass ist demnach die höchste Karte, die Sieben die niedrigste. Beachtet beim Stechen, dass die Zehn direkt hinter dem Ass rankt und erst danach die Bild-Karten kommen. Außerdem: Trumpf sticht beim 20 ab Kartenspiel immer!</p>
+                        <h2>Spielvorbereitung</h2>
+                        <p>Der Geber mischt die Spielkarten und teilt an jeden der Mitspieler sowie sich selbst jeweils drei Karten aus. Alle dürfen die Karten direkt auf die Hand nehmen. Der Spieler links des Gebers bestimmt nun den Trumpf. Danach erhält jeder der Mitspieler weitere zwei Karten.</p>
+                        <h2>Spielablauf</h2>
+                        <p>Als Nächstes darf jeder der Spieler bis zu drei seiner Karten austauschen oder aussetzen. Dies geschieht im Uhrzeigersinn. Anschließend kann das Spiel beginnen:</p>
+                        <ol><li>Der erste Spieler legt eine Karte in die Tischmitte.
+                            <li>Die anderen Spieler müssen nun Farbe bekennen.
+                            <li>Geht das nicht, muss man Trumpf legen.
+                            <li>Hat man auch keine Trumpfkarte, darf eine beliebige Karte abgelegt werden.</ol>
+                        <p>Die genannte Reihenfolge ist zwingend. Wer den Stich macht darf die nächste Karte ausspielen. Es werden alle fünf Stiche durchgespielt, danach folgt die Abrechnung.</p>
+                        <h2>Abrechnung bei 20 ab</h2>
+                        <p>Zum Abrechnen nimmt man sich einen Zettel und einen Stift zur Hand. Jeder Spieler erhält an erster Stelle 20 Punkte auf sein Konto. Für jeden Stich wird ihm 1 Punkt davon abgezogen. Ist die Trumpffarbe Herz, zieht man 2 Punkte ab. Kann ein Spieler keinen Stich machen, werden ihm 5 Punkte gutgeschrieben.</p>
+                        <p>So spielt man reihum weiter, bis einer der Spieler die Null-Grenze erreicht oder überschreitet.</p> 
+                        <h2>Spielende</h2>
+                        <p>Der Spieler, der als erster genau die Null-Punkte-Marke erreicht, geht als Gewinner des Spiels hervor.</p>
+                        <h2>Hinweise</h2>
+                        <h3>Herz blind</h3>
+                        <p>Die Farbe Herz kann vor dem Austeilen der ersten Karte also "blind" als Trumpf bestimmen werden. In diesem Fall zählt jeder Stich nochmals doppelt, also vierfach.</p>
+                        <h3>Karten Tauschen</h3>
+                        <p>Tauschen darf nur wer mehr als 3 Punkte hat</p>
+                        <h3>Aussetzen</h3>
+                        <ul><li type="square">Aussetzen darf, wer mehr als 5 Punkte hat.
+                            <li type="square">In der ersten Runde darf nicht ausgesetzt werden.
+                            <li type="square">Der Trumpf ansagende Spieler darf nicht aussetzen.
+                            <li type="square">Die Trumpffarbe Kreuz ist Pflicht. Es darf nicht ausgesetzt werden.
+                            <li type="square">Jeder Spieler darf maximal die Anzahl der Spieler-1 aussetzen.
+                        </ul><br>
+                    </div>
+                    <div id="helpWindowBtnPanel">
+                        <input type="button" value="Schlie&szlig;en" id="closeHelpButton" onclick="onCloseHelp()">
+                    </div>
+                </div>                
             </div>
 
             <div id="loginPage">
@@ -141,24 +190,10 @@
         <script>
             $(document).ready(function () {
                 onDocumentReady();
-                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "Oli");
-                $("#pPwd").val((navigator.userAgent.indexOf("Firefox") > -1) ? "123456" : "games");
+                
+//                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "testUser");
+//                $("#pPwd").val("123456");
 //                login();
-//                if (!true) {
-//                    setTimeout(function () {
-//
-//                        setLoginPageVisible(false);
-//                        myName = "Player 1";
-////                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}, {name: "Player 5"}];
-//                        players = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
-//                        attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
-//                        allAttendees = [0, 1, 2, 3];
-//                        updatePlayerList();
-//                        updateAttendeeList();
-//
-//                        onTrump({"action": "trump", "color": 2, "blind": false, "value": 10});
-//                    }, 1000);
-//                }
             });
         </script>
     </body>

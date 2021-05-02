@@ -25,6 +25,7 @@ var scoreboard;
 var roundInfo;
 var roundCounter;
 var gameWinner;
+var helpWindow;
 
 function onDocumentReady() {
     $("#loginConsole").text("Anmeldung vorbereiten...");
@@ -37,6 +38,8 @@ function onDocumentReady() {
     shufflingCard = $(getSvgCard(coveredCard).getUI()).clone();
     roundInfo = $("#roundInfo");
     scoreboard = $("#scoreboard");
+    helpWindow = $("#helpWindow");
+    helpWindow.hide();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#heartBlindDialog"), false);
@@ -1187,6 +1190,14 @@ function getStackId(card, stack) {
 
 /* ---------------------------------------------------------------------------*/
 
+
+function onOpenHelp() {
+    helpWindow.slideDown(500);
+}
+
+function onCloseHelp() {
+    helpWindow.slideUp(500)();
+}
 
 function processCardHover(uiCard, isHover) {
     if (mover === myName && (gamePhase === "buy" || gamePhase === "waitForPlayerMove")) {

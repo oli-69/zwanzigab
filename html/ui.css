@@ -205,6 +205,56 @@ main {
     margin-top: 0.3em;
 }
 
+#helpButton{
+    background-image: url("Help-icon24.png");
+    position: fixed;
+    top:0px;
+    right:0px;
+    width: 24px;
+    height: 24px;
+    margin:0.3em;
+}
+
+#helpButton:hover{
+    cursor: pointer;
+}
+
+#helpWindow {
+    position:fixed;
+    left: 10%;
+    right: 10%;
+    top: 10%;
+    bottom: 20%;
+    background-color: rgba(16,16,16,1);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    border-color: lightgray;
+    display:flex;
+    flex-direction: column;
+}
+
+h1, h2, h3 {
+    color: rgb(220, 255, 0);
+}
+#helpWindowContent{
+    flex-grow: 1.0;
+    color: white;
+    padding: 0.5em;
+    padding-left:1em;
+    margin:0.2em;
+    padding-right:1em;
+    text-align: justify;
+    overflow-y: scroll;
+}
+
+#helpWindowBtnPanel{
+    background-color: rgba(0,0,0,1);
+    display: flex;
+    justify-content: center;
+    padding: 0.5em;
+}
+
 #playerListPanel{
     display: flex;
     justify-content: center;
@@ -453,6 +503,24 @@ main {
     body {
         font-size: 0.9em;
     }
+
+    #helpWindow {
+        left: 25%;
+        right: 25%;
+    }
+
+    #helpWindow {
+        left: 20%;
+        right: 20%;
+    }
+
+    #helpButton{
+        background-image: url("Help-icon32.png");
+        width: 32px;
+        height: 32px;
+        margin:0.2em;
+    }
+
     #playerListPanel, #scoreboard, #bottomPanel{
         background-color: rgba(0,0,0,0.5);
     }
@@ -559,6 +627,11 @@ main {
 @media all and (min-width: 70em) {
     body {
         font-size: 1em;
+    }
+
+    #helpWindow {
+        left: 25%;
+        right: 25%;
     }
 
     #logoffBtn, #chatBtn, #videoBtn{
