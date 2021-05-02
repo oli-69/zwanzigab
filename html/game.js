@@ -342,7 +342,7 @@ function onSortedStack(message) {
 function onTrump(message) {
     trump = message;
     var animateTrumpFunction = function () {
-        if(!trump.blind) {
+        if (!trump.blind) {
             sound.trump.play();
         }
         animateTrumpSelected(function () {

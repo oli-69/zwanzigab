@@ -9,7 +9,6 @@ import cardgame.SocketMessage;
 import cardgame.messages.AttendeeList;
 import cardgame.messages.AttendeeStacks;
 import cardgame.messages.PlayerList;
-import zwanzigab.messages.StartRound;
 import cardgame.messages.WebradioUrl;
 import com.google.gson.JsonArray;
 import java.awt.Image;
@@ -33,6 +32,7 @@ import zwanzigab.messages.MoveResult;
 import zwanzigab.messages.RoundResult;
 import zwanzigab.messages.SortedStack;
 import zwanzigab.messages.StackResult;
+import zwanzigab.messages.StartRound;
 import zwanzigab.messages.Trump;
 
 /**
@@ -228,9 +228,9 @@ public class ZwanzigAbGame extends CardGame {
     public void stopGame() {
         if (gamePhase != GAMEPHASE.waitForAttendees) {
             mover = guessNextGameStarter();
-            attendees.forEach((attendee) -> attendee.reset());
+            players.forEach((attendee) -> attendee.reset());
             AttendeeList attendeeList = new AttendeeList(attendees, mover);
-            attendees.forEach(attendee -> attendee.getSocket().sendString(gson.toJson(attendeeList)));
+            players.forEach(attendee -> attendee.getSocket().sendString(gson.toJson(attendeeList)));
             setGamePhase(GAMEPHASE.waitForAttendees);
             chat("Spiel #" + gameCounter + " wurde abgebrochen");
         } else {
@@ -328,7 +328,7 @@ public class ZwanzigAbGame extends CardGame {
                 if (isValidMove(player, cardID)) {
                     Card card = player.getStack().remove(cardID);
                     round.add(card, player, getAttendeeID(player));
-                    attendees.forEach((attendee)
+                    players.forEach((attendee)
                             -> attendee.getSocket().sendString(gson.toJson(
                                     new MoveResult(cardID, card,
                                             attendee.equals(player) ? attendee.getStack() : null,
@@ -353,7 +353,7 @@ public class ZwanzigAbGame extends CardGame {
                     player.increaseSkipCount();
                     player.getStack().clear();
                     BuyResult buyResult = new BuyResult(); // -> this is the skip message
-                    attendees.forEach((attendee) -> attendee.getSocket().sendString(gson.toJson(buyResult)));
+                    players.forEach((attendee) -> attendee.getSocket().sendString(gson.toJson(buyResult)));
                     stepBuySkip();
                 } else {
                     LOGGER.warn("Spieler " + player.getName() + " darf nicht aussetzen!");
@@ -381,9 +381,9 @@ public class ZwanzigAbGame extends CardGame {
                             stack.set(id, getFromStack());
                         }
                         Arrays.sort(cardIDsInt);
-                        attendees.forEach((attendee)
+                        players.forEach((attendee)
                                 -> attendee.getSocket().sendString(gson.toJson(
-                                        new BuyResult(cardIDsInt, attendee.equals(player) ? attendee.getStack() : getCoveredStack(attendee.getStack())))));
+                                        new BuyResult(cardIDsInt, attendee.equals(player) ? attendee.getStack() : getCoveredStack(player.getStack())))));
                         if (cardIDsInt.length > 0) {
                             player.getStack().sort(getCardComparator());
                             player.getSocket().sendString(gson.toJson(new SortedStack(player.getStack())));
@@ -416,7 +416,7 @@ public class ZwanzigAbGame extends CardGame {
                     }
                     LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color));
                     sendToPlayers(gson.toJson(round.trump));
-                    attendees.forEach((attendee)
+                    players.forEach((attendee)
                             -> attendee.getSocket().sendString(gson.toJson(new AttendeeStacks(getAttendeeStackMap(attendee)))));
                     setGamePhase(GAMEPHASE.deal2cards);
                     sortPlayerStacks();
@@ -442,7 +442,7 @@ public class ZwanzigAbGame extends CardGame {
                     LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color) + " blind");
                     sendToPlayers(gson.toJson(round.trump));
                     cardDealService.dealCardsSingle(5, this); // deal all five cards
-                    attendees.forEach((attendee)
+                    players.forEach((attendee)
                             -> attendee.getSocket().sendString(gson.toJson(new AttendeeStacks(getAttendeeStackMap(attendee)))));
                     setGamePhase(GAMEPHASE.deal5cards);
                     sortPlayerStacks();
@@ -450,7 +450,7 @@ public class ZwanzigAbGame extends CardGame {
                 } else {
                     // deal the first three cards
                     cardDealService.dealCardsPacked(3, this);
-                    attendees.forEach((attendee)
+                    players.forEach((attendee)
                             -> attendee.getSocket().sendString(gson.toJson(new AttendeeStacks(getAttendeeStackMap(attendee)))));
                     setGamePhase(GAMEPHASE.deal3cards);
                 }
@@ -525,7 +525,7 @@ public class ZwanzigAbGame extends CardGame {
             stackWinner.increaseRoundTokens();
             round.clearStack();
             gameStackProperties.shakeAll();
-            attendees.forEach((attendee)
+            players.forEach((attendee)
                     -> attendee.getSocket().sendString(
                             gson.toJson(
                                     new StackResult(getAttendeeID(stackWinner),
@@ -553,7 +553,7 @@ public class ZwanzigAbGame extends CardGame {
                         player.resetRoundTokens();
                     }
                 });
-                attendees.forEach((attendee) -> attendee.getSocket().sendString(gson.toJson(new RoundResult(new AttendeeList(attendees, mover)))));
+                players.forEach((attendee) -> attendee.getSocket().sendString(gson.toJson(new RoundResult(new AttendeeList(attendees, mover)))));
 
                 // end of game?
                 if (attendees.stream().anyMatch((player) -> (player.getGameTokens() <= 0))) {
