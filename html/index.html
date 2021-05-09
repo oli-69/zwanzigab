@@ -93,7 +93,7 @@
                 </div>
                 <div id="buyDialog" class="gameDialog">
                     <div>Karten zum Tauschen w&auml;hlen</div><br>
-                    <input type="button" class="dialogButton" value="Weiter" onclick="onBuy()" />
+                    <input type="button" class="dialogButton" value="Ausgewählte Karten tauschen" onclick="onBuy()" />
                 </div>
                 <div id="buyResultDialog" class="gameDialog">
                     <div id="buyResultDialogMessage"></div><br>
@@ -132,10 +132,10 @@
                             <li>Hat man auch keine Trumpfkarte, darf eine beliebige Karte abgelegt werden.</ol>
                         <p>Die genannte Reihenfolge ist zwingend. Wer den Stich macht darf die nächste Karte ausspielen. Es werden alle fünf Stiche durchgespielt, danach folgt die Abrechnung.</p>
                         <h2>Abrechnung bei 20 ab</h2>
-                        <p>Zum Abrechnen nimmt man sich einen Zettel und einen Stift zur Hand. Jeder Spieler erhält an erster Stelle 20 Punkte auf sein Konto. Für jeden Stich wird ihm 1 Punkt davon abgezogen. Ist die Trumpffarbe Herz, zieht man 2 Punkte ab. Kann ein Spieler keinen Stich machen, werden ihm 5 Punkte gutgeschrieben.</p>
+                        <p>Jeder Spieler erhält an erster Stelle 20 Punkte auf sein Konto. Für jeden Stich wird ihm 1 Punkt davon abgezogen. Kann ein Spieler keinen Stich machen, werden ihm 5 Punkte gutgeschrieben. Kann der Trumpfansagende Spieler keinen Stich machen, werden ihm 10 Punkte gutgeschrieben. Ist die Trumpffarbe Herz, zählen die Punkte jeweils doppelt. </p>
                         <p>So spielt man reihum weiter, bis einer der Spieler die Null-Grenze erreicht oder überschreitet.</p> 
                         <h2>Spielende</h2>
-                        <p>Der Spieler, der als erster genau die Null-Punkte-Marke erreicht, geht als Gewinner des Spiels hervor.</p>
+                        <p>Der Spieler, der als erster die Null-Punkte-Marke erreicht, geht als Gewinner des Spiels hervor.</p>
                         <h2>Hinweise</h2>
                         <h3>Herz blind</h3>
                         <p>Die Farbe Herz kann vor dem Austeilen der ersten Karte, also "blind", als Trumpf bestimmen werden. In diesem Fall zählt jeder Stich zusätzlich doppelt, also vierfach.</p>
@@ -146,7 +146,7 @@
                             <li type="square">In der ersten Runde darf nicht ausgesetzt werden.
                             <li type="square">Der Trumpf ansagende Spieler darf nicht aussetzen.
                             <li type="square">Die Trumpffarbe Kreuz ist Pflicht. Es darf nicht ausgesetzt werden.
-                            <li type="square">Jeder Spieler darf maximal die Anzahl der Spieler-1 aussetzen.
+                            <li type="square">Jeder Spieler darf maximal die Anzahl der Spieler-2 hintereinander aussetzen.
                         </ul><br>
                     </div>
                     <div id="helpWindowBtnPanel">
@@ -191,8 +191,8 @@
             $(document).ready(function () {
                 onDocumentReady();
                 
-//                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "testUser");
-//                $("#pPwd").val("123456");
+                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "testUser");
+                $("#pPwd").val("123456");
 //                login();
             });
         </script>

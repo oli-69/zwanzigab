@@ -135,6 +135,7 @@ var UICard = function (color, value, fetchFunction) {
     this.color = color;
     this.value = value;
     this.selected = false;
+    this.hover = false;
     var svgName = getSvgName(color, value);
     this.img = $("<img class='card' src='cards/" + svgName + ".png'>");
     this.ui = $("<div class='card' id='" + svgName + "'></div>");
@@ -168,6 +169,40 @@ UICard.prototype.getUI = function () {
     return this.ui;
 };
 
+UICard.prototype.blink = function () {
+    var selected = this.selected;
+    var hover = this.hover;
+    var card = this;
+    var readyFunction = function () {
+        card.setSelected(selected);
+        card.setHover(hover);
+    };
+
+    // animate
+    this.img.css("opacity", 1.0);
+    this.ui.css("background-color", "#FF0000");
+    var animTime = 75;
+
+    var options = {
+        "duration": animTime,
+        "easing": "linear",
+    };
+    var count = 0;
+    var amount = -0.3;
+    var img = this.img;
+    var loop = function () {
+        if (count === 6) {
+            options.complete = readyFunction;
+        } else {
+            options.complete = loop;
+        }
+        img.animate({"opacity": (parseFloat(img.css("opacity")) + amount)}, options);
+        count++;
+        amount *= -1;
+    }
+    loop();
+}
+
 UICard.prototype.setSelected = function (selected) {
     this.selected = selected;
     this.img.css("opacity", (selected ? "0.7" : "1"));
@@ -175,6 +210,7 @@ UICard.prototype.setSelected = function (selected) {
 };
 
 UICard.prototype.setHover = function (isHover) {
+    this.hover = isHover;
     var cursor = isHover ? "pointer" : "auto";
     this.ui.css("cursor", cursor);
     if (!this.selected) {

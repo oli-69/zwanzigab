@@ -319,7 +319,7 @@ function onSortedStack(message) {
     for (var i = 0; i < srcStack.length; i++) {
         dstProps[i] = getCardAnimProps($(childs[i]));
     }
-    var animTime = 500;
+    var animTime = 400;
     var loopBack = function () {
         updateAttendeeStack(attendeesCardStacks[id], attendeeStacks[id]);
         childs = attendeesCardStacks[id].children();
@@ -364,27 +364,33 @@ function onTrump(message) {
 function onBuyResult(message) {
     var messageDialog = $("#buyResultDialog");
     var messageField = $("#buyResultDialogMessage");
+    var meIsMover = mover === myName
     var readyFunction = function () {
+        updateScoreboard();
         messageInProgress = false;
         onMessageBuffer();
     };
     if (message.skip) {
-        mover.skipCount++;
-        messageField.html((mover === myName ? "Du" : mover) + " setzt aus");
+        attendees[getAttendeeIdByName(mover)].skipcount++;
+        messageField.html((meIsMover ? "Du" : mover) + " setzt aus");
         animateGameDialog(messageDialog);
         animateDropCards([0, 1, 2, 3, 4], function () {
             attendeeStacks[getAttendeeIdByName(mover)] = [];
-            readyFunction();
+            setTimeout(function () {
+                readyFunction();
+            }, 1000);
         });
     } else if (message.cardIDs !== undefined && message.cardIDs !== null && message.cardIDs.length > 0) {
-        messageField.html((mover === myName ? "Du nimmst " : (mover + " nimmt ")) + message.cardIDs.length + " Karten");
+        attendees[getAttendeeIdByName(mover)].skipcount = 0;
+        messageField.html((meIsMover ? "Du nimmst " : (mover + " nimmt ")) + message.cardIDs.length + " Karten");
         animateGameDialog(messageDialog);
         animateDropCards(message.cardIDs, function () {
             animateDealBuyCards(message.cardIDs, message.stack, readyFunction);
         });
     } else {
         sound.pass.play();
-        messageField.html((mover === myName ? "Du nimmst " : (mover + " nimmt ")) + "keine Karten");
+        attendees[getAttendeeIdByName(mover)].skipcount = 0;
+        messageField.html((meIsMover ? "Du nimmst " : (mover + " nimmt ")) + "keine Karten");
         animateGameDialog(messageDialog, readyFunction);
     }
 }
@@ -433,7 +439,9 @@ function onStackResult(message) {
         messageInProgress = false;
         onMessageBuffer();
     };
-    animateStackResult(message.stackWinnerId, readyFunction);
+    setTimeout(function () {
+        animateStackResult(message.stackWinnerId, readyFunction);
+    }, 1000);
 }
 
 function onRoundResult(message) {
@@ -453,6 +461,7 @@ function onGameResult(message) {
     };
     sound.gameover.onended = function () {
         players = message.players.players;
+        updatePlayerList();
         animateGameResult(readyFunction);
     };
     sound.gameover.play();
@@ -523,7 +532,7 @@ function updateScoreboard() {
                     "</div><div class='scoreboardEntryColon'>:</div><div class='scoreboardEntryScore'>" +
                     attendees[i].gameTokens +
                     "</div><div class='scoreboardEntrySkips'>" +
-                    getTallymarks(attendees[i].skipCount) +
+                    getTallymarks(attendees[i].skipcount) +
                     "</div>"
                     );
         }
@@ -845,7 +854,7 @@ function animateDealCards(count, readyFunction) {
 
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
     var distance = Math.abs(calculateDistanceBetweenPoints(parseFloat(left), parseFloat(top), parseFloat(props.x), parseFloat(props.y)));
-    var animTime = 4.5 * distance;
+    var animTime = 2.5 * distance;
     animateSingleCard(card, top, left, 0, props, delay, animTime, readyFunction);
 }
 
@@ -1002,8 +1011,9 @@ function animateDropCards(cardIDs, readyFunction) {
             oldCard = newCard;
         }
         var isLastCard = i === (cardIDs.length - 1);
+        var animTime = 3 * calculateDistanceBetweenPoints(parseFloat(srcProps.x), parseFloat(srcProps.y), dstPos.x, dstPos.y);
         sound.dropcards.play();
-        animateSingleCard(oldCard, srcProps.y, srcProps.x, srcProps.r, dstPos, 0, 1500, isLastCard ? readyFunction : undefined);
+        animateSingleCard(oldCard, srcProps.y, srcProps.x, srcProps.r, dstPos, 0, animTime, isLastCard ? readyFunction : undefined);
     }
 }
 
@@ -1052,7 +1062,9 @@ function animatePlayCard(moverID, cardID, card, readyFunction) {
         oldCard.remove();
         $("#gameStack").append(newCard);
     }
-    animateSingleCard(newCard, srcProps.y, srcProps.x, srcProps.r, dstProps, 0, 1500, readyFunction);
+
+    var aniTime = 4 * calculateDistanceBetweenPoints(parseFloat(srcProps.x), parseFloat(srcProps.y), parseFloat(dstProps.x), parseFloat(dstProps.y));
+    animateSingleCard(newCard, srcProps.y, srcProps.x, srcProps.r, dstProps, 0, aniTime, readyFunction);
 }
 
 function animateStackResult(stackWinnerId, readyFunction) {
@@ -1063,7 +1075,6 @@ function animateStackResult(stackWinnerId, readyFunction) {
     for (var i = 0; i < childs.length; i++) {
         cards[i] = $(childs[i]);
     }
-    var animTime = 1000;
     var dstProps = {
         y: off.top + (winnerStack.height() - cards[0].height()) * 0.5,
         x: off.left + (winnerStack.width() - cards[0].width()) * 0.5,
@@ -1076,11 +1087,12 @@ function animateStackResult(stackWinnerId, readyFunction) {
         card.remove();
         card = $(getSvgCard(coveredCard).getUI().clone());
         card.css({
-            "top": srcPos.y,
-            "left": srcPos.x,
+            "top": srcPos.top,
+            "left": srcPos.left,
             "transform": "rotate(" + srcRot + "deg)",
             "position": "fixed"
         });
+        var animTime = 3 * calculateDistanceBetweenPoints(parseFloat(srcPos.top), parseFloat(srcPos.left), parseFloat(dstProps.x), parseFloat(dstProps.y));
         winnerStack.prepend(card);
         animateSingleCard(card, srcPos.top, srcPos.left, srcRot, dstProps, 0, animTime, (i === cards.length - 1) ? readyFunction : undefined);
     }
@@ -1092,9 +1104,9 @@ function animateRoundResult(readyFunction) {
     updateScoreboard();
     scoreboard.css("transform-origin", "100% 0%");
     var loopback = function () {
+        sound.points.play();
         animateScale(scoreboard, sized, 1.0, animTime, readyFunction);
     }
-    sound.points.play();
     animateScale(scoreboard, 1.0, sized, animTime, loopback);
 }
 
@@ -1104,9 +1116,9 @@ function animateGameResult(readyFunction) {
     var panel = $("#playerListPanel");
     panel.css("transform-origin", "50% 0%");
     var loopback = function () {
+        sound.cash.play();
         animateScale(panel, sized, 1.0, animTime, readyFunction);
     }
-    sound.cash.play();
     animateScale(panel, 1.0, sized, animTime, loopback);
 }
 
@@ -1224,7 +1236,8 @@ function processCardClick(uiCard) {
                     }
                     break;
                 case "waitForPlayerMove":
-                    if (card.selected) {
+                    var isConfirmMove = $("#confirmMove").prop("checked");
+                    if (isConfirmMove && card.selected) {
                         selectedCards = [];
                         card.setSelected(false);
                     } else {
@@ -1234,7 +1247,7 @@ function processCardClick(uiCard) {
                         selectedCards[0] = cardId;
                         card.setSelected(true);
                     }
-                    $("#playCardBtn").prop("disabled", !($("#confirmMove").prop("checked") && selectedCards.length === 1))
+                    $("#playCardBtn").prop("disabled", !(isConfirmMove && selectedCards.length === 1))
                     if ($("#playCardBtn").prop("disabled") === true) {
                         onPlayerMove();
                     }
@@ -1328,6 +1341,7 @@ function onPlayerMove() {
         } else {
             sound.wrong.currentTime = 0;
             sound.wrong.play();
+            getSvgCard(attendeeStacks[getMyAttendeeId()][selectedCards[0]]).blink();
         }
     }
 }
