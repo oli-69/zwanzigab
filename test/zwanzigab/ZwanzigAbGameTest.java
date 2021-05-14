@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -445,7 +446,9 @@ public class ZwanzigAbGameTest {
         }
 
         public String getMessage(String action) {
-            for (String message : messageBuff) {
+            ListIterator<String> listIterator = messageBuff.listIterator(messageBuff.size());
+            while(listIterator.hasPrevious()) {
+                String message = listIterator.previous();
                 if (message.contains("\"action\":\"" + action + "\"")) {
                     return message;
                 }
