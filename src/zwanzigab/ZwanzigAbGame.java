@@ -388,7 +388,7 @@ public class ZwanzigAbGame extends CardGame {
                             boolean isMover = attendee.equals(player);
                             attendee.getSocket().sendString(gson.toJson(
                                     new BuyResult(
-                                            isMover ? cardIDsInt : getRandomCardIDs(cardIDsInt.length, attendee.getStack().size()),
+                                            isMover ? cardIDsInt : getRandomCardIDs(cardIDsInt.length, player.getStack().size()),
                                             isMover ? attendee.getStack() : getCoveredStack(player.getStack()))));
                         });
                         if (cardIDsInt.length > 0) {
@@ -531,7 +531,7 @@ public class ZwanzigAbGame extends CardGame {
             Player stackWinner = round.cardPlayerMap.get(getMaxCardOfStack(round.stack));
             stackWinner.increaseRoundTokens();
             round.clearStack();
-            gameStackProperties.shakeAll();
+            gameStackProperties.shakeAll(true);
             players.forEach((attendee)
                     -> attendee.getSocket().sendString(
                             gson.toJson(
@@ -542,6 +542,7 @@ public class ZwanzigAbGame extends CardGame {
 
             // end of current round?
             if (round.stackCounter == 5) {
+                gameStackProperties.shakeAll();
                 attendees.forEach(player -> {
                     if (!round.skippers.contains(player)) {
                         int score = player.getRoundTokens();
@@ -781,6 +782,9 @@ public class ZwanzigAbGame extends CardGame {
     }
 
     private int[] getRandomCardIDs(int count, int size) {
+        if (count > size) {
+            throw new IllegalArgumentException(String.format("RandomCardIDs: count(%d) > size(%d)!", count, size));
+        }
         List<Integer> cardIDs = new ArrayList<>();
         int[] cardIDsInt = new int[count];
         int c = 0;

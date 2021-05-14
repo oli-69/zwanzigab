@@ -122,6 +122,21 @@ public class ZwanzigAbGameTest {
         socket2.onText("{\"action\": \"move\", \"cardID\": 0}");
     }
 
+    // Test for a bug detected at 13.05.21
+    @Test
+    public void testSkip_lastPlayerInRound() {
+        int trump = Card.CARO;
+        startWith4Players();
+        game.getRound().roundCounter = 2; // increase the round, since in the first round skipping isn't allowed
+        socket2.onText("{\"action\": \"heartBlind\", \"value\": \"false\"}");
+        socket2.onText("{\"action\": \"setTrump\", \"value\": \"" + trump + "\"}");
+        socket2.onText("{\"action\": \"buy\", \"cardIDs\": [0,1]}");
+        socket3.onText("{\"action\": \"buy\", \"cardIDs\": [0,3]}");
+        socket4.onText("{\"action\": \"skip\"}");
+        socket1.onText("{\"action\": \"buy\", \"cardIDs\": [2,3]}");
+        assertEquals(player2, game.getMover());
+    }
+
     @Test
     public void testSkip_fail_trumpIsClub() {
         int trump = 4;
@@ -365,6 +380,14 @@ public class ZwanzigAbGameTest {
         login(player1);
         login(player2);
         login(player3);
+        game.startGame();
+    }
+
+    private void startWith4Players() {
+        login(player1);
+        login(player2);
+        login(player3);
+        login(player4);
         game.startGame();
     }
 

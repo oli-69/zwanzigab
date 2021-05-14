@@ -385,7 +385,9 @@ function onBuyResult(message) {
         messageField.html((meIsMover ? "Du nimmst " : (mover + " nimmt ")) + message.cardIDs.length + " Karten");
         animateGameDialog(messageDialog);
         animateDropCards(message.cardIDs, function () {
-            animateDealBuyCards(message.cardIDs, message.stack, readyFunction);
+            setTimeout(function () {
+                animateDealBuyCards(message.cardIDs, message.stack, readyFunction);
+            }, 1000);
         });
     } else {
         sound.pass.play();
@@ -796,6 +798,7 @@ function animateDeal5Cards(readyFunction) {
     var finish = function () {
         setTimeout(readyFunction, 1500)
     };
+    log("Animate Deal 5 cards now");
     for (var i = 0; i < cards.length; i++) {
         animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, (i === cards.length - 2) ? finish : undefined);
     }
@@ -1048,6 +1051,7 @@ function animateDealBuyCards(cardIDs, stack, readyFunction) {
 function animatePlayCard(moverID, cardID, card, readyFunction) {
     var oldCard = $(attendeesCardStacks[moverID].children()[cardID]);
     var dstProps = getGameStackProperties(moverID, oldCard);
+    dstProps.r += cardFlips[moverID] * 360;
     var srcProps = getCardAnimProps(oldCard);
     var newCard = $(getSvgCard(card).getUI().clone());
     newCard.css({
