@@ -42,7 +42,7 @@ public class ZwanzigAbGame extends CardGame {
 
     private static final Logger LOGGER = LogManager.getLogger(ZwanzigAbGame.class);
     private static final String GAME_NAME = "Zwanzig Ab Server";
-    private static final Image GAME_ICON = new ImageIcon(ZwanzigAbGame.class.getResource("favicon-32x32.png")).getImage();
+    private static Image GAME_ICON;
 
     private final CardDealService cardDealService;
     private final Round round;
@@ -195,6 +195,9 @@ public class ZwanzigAbGame extends CardGame {
 
     @Override
     public Image getIcon() {
+        if (GAME_ICON == null) {
+            GAME_ICON = new ImageIcon(ZwanzigAbGame.class.getResource("favicon-32x32.png")).getImage();
+        }
         return GAME_ICON;
     }
 
