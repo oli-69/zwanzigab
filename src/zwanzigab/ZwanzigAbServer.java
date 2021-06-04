@@ -93,6 +93,7 @@ public class ZwanzigAbServer extends GameServer {
         }, "Stop HttpServer Hook"));
         new PingWatchdog(game).start();
 
+        game.setGameTimeout(Integer.parseInt(settings.getProperty("gameTimeout", "0")));
         game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "true")));
         if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
             installLookAndFeel();

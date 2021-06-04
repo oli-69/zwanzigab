@@ -51,7 +51,6 @@ public class ZwanzigAbGame extends CardGame {
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private Player gameStartDealer = null;
-    private int gameCounter = 0;
     private Player gameWinner;
 
     /**
@@ -236,9 +235,7 @@ public class ZwanzigAbGame extends CardGame {
             players.forEach(attendee -> attendee.getSocket().sendString(gson.toJson(attendeeList)));
             setGamePhase(GAMEPHASE.waitForAttendees);
             chat("Spiel #" + gameCounter + " wurde abgebrochen");
-        } else {
-            LOGGER.warn("Das Spiel ist bereits gestoppt!");
-        }
+        } 
     }
 
     /**
