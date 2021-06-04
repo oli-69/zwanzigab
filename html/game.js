@@ -754,6 +754,8 @@ function setShuffling(isShuffling) {
         sound.shuffle.play();
         $("body").prepend(shufflingCard);
         var pos = getShuffleCardsPosition(shufflingCard);
+        log("Shuffling Card Position:");
+        log(pos);
         shufflingCard.css({position: "fixed", top: pos.top, left: pos.left});
         pos.stack.append(shufflingCard);
         var shakeTime = 1000;
@@ -1212,7 +1214,7 @@ function onOpenHelp() {
 }
 
 function onCloseHelp() {
-    helpWindow.slideUp(500)();
+    helpWindow.slideUp(500);
 }
 
 function processCardHover(uiCard, isHover) {
