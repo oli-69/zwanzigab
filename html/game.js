@@ -754,10 +754,9 @@ function setShuffling(isShuffling) {
         sound.shuffle.play();
         $("body").prepend(shufflingCard);
         var pos = getShuffleCardsPosition(shufflingCard);
-        log("Shuffling Card Position:");
-        log(pos);
         shufflingCard.css({position: "fixed", top: pos.top, left: pos.left});
         pos.stack.append(shufflingCard);
+        shufflingCard.show();
         var shakeTime = 1000;
         var shakes = 6;
         var shakeAmount = 2;
@@ -1016,7 +1015,7 @@ function animateDropCards(cardIDs, readyFunction) {
             oldCard = newCard;
         }
         var isLastCard = i === (cardIDs.length - 1);
-        var animTime = 3 * calculateDistanceBetweenPoints(parseFloat(srcProps.x), parseFloat(srcProps.y), dstPos.x, dstPos.y);
+        var animTime = 800; //3 * calculateDistanceBetweenPoints(parseFloat(srcProps.x), parseFloat(srcProps.y), dstPos.x, dstPos.y);
         sound.dropcards.play();
         animateSingleCard(oldCard, srcProps.y, srcProps.x, srcProps.r, dstPos, 0, animTime, isLastCard ? readyFunction : undefined);
     }
@@ -1069,7 +1068,7 @@ function animatePlayCard(moverID, cardID, card, readyFunction) {
         $("#gameStack").append(newCard);
     }
 
-    var aniTime = 4 * calculateDistanceBetweenPoints(parseFloat(srcProps.x), parseFloat(srcProps.y), parseFloat(dstProps.x), parseFloat(dstProps.y));
+    var aniTime = 800; // 4 * calculateDistanceBetweenPoints(parseFloat(srcProps.x), parseFloat(srcProps.y), parseFloat(dstProps.x), parseFloat(dstProps.y));
     animateSingleCard(newCard, srcProps.y, srcProps.x, srcProps.r, dstProps, 0, aniTime, readyFunction);
 }
 
@@ -1098,7 +1097,7 @@ function animateStackResult(stackWinnerId, readyFunction) {
             "transform": "rotate(" + srcRot + "deg)",
             "position": "fixed"
         });
-        var animTime = 3 * calculateDistanceBetweenPoints(parseFloat(srcPos.top), parseFloat(srcPos.left), parseFloat(dstProps.x), parseFloat(dstProps.y));
+        var animTime = 1000; // 3 * calculateDistanceBetweenPoints(parseFloat(srcPos.top), parseFloat(srcPos.left), parseFloat(dstProps.x), parseFloat(dstProps.y));
         winnerStack.prepend(card);
         animateSingleCard(card, srcPos.top, srcPos.left, srcRot, dstProps, 0, animTime, (i === cards.length - 1) ? readyFunction : undefined);
     }

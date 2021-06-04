@@ -419,7 +419,7 @@ public class ZwanzigAbGame extends CardGame {
                     if (color > 0) {
                         round.trump = new Trump(color);
                     } else {
-                        round.trump = new Trump(player.getStack().get(3), 1000 + getRandomVariation(3000, 200)); // next card
+                        round.trump = new Trump(player.getStack().get(3), 1000 + getRandomVariation(3500, 200)); // next card
                     }
                     LOGGER.info("Trumpf: " + Card.colorToString(round.trump.color));
                     sendToPlayers(gson.toJson(round.trump));
