@@ -1,7 +1,7 @@
 # ZwanzigAb Online
 ### Online version of the card game "Zwanzig Ab"
 
-![Preview Image](/ext/preview.jpg)
+![Preview Image](/ext/preview.jpeg)
 
 During the corona pandemic and the associated contact restrictions, I decided to program the card game "Zwanzig Ab" in an online version. It is the successor of "Schwimmen Online" (https://github.com/oli-69/schwimmen), the first game in the series. "ZwanzigAb Online" enables contactless gaming with friends over the Internet.
 
