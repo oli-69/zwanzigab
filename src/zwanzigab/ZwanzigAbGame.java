@@ -215,12 +215,14 @@ public class ZwanzigAbGame extends CardGame {
             if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
                 firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
             }
-            gameStackProperties.setSize(attendees.size());
-            round.roundCounter = 0;
-            initRound(guessNextGameStarter());
-            mover = round.trumper;
-            gameCounter++;
-            setGamePhase(GAMEPHASE.shuffle);
+            if (attendees.size() > 1) {
+                gameStackProperties.setSize(attendees.size());
+                round.roundCounter = 0;
+                initRound(guessNextGameStarter());
+                mover = round.trumper;
+                gameCounter++;
+                setGamePhase(GAMEPHASE.shuffle);
+            }
         } else {
             LOGGER.warn("Das Spiel ist bereits gestartet!");
         }
@@ -235,7 +237,7 @@ public class ZwanzigAbGame extends CardGame {
             players.forEach(attendee -> attendee.getSocket().sendString(gson.toJson(attendeeList)));
             setGamePhase(GAMEPHASE.waitForAttendees);
             chat("Spiel #" + gameCounter + " wurde abgebrochen");
-        } 
+        }
     }
 
     /**
