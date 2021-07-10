@@ -754,7 +754,7 @@ function setShuffling(isShuffling) {
         sound.shuffle.play();
         $("body").prepend(shufflingCard);
         var pos = getShuffleCardsPosition(shufflingCard);
-        shufflingCard.css({position: "fixed", top: pos.top, left: pos.left});
+        shufflingCard.css({position: "fixed", top: pos.top, left: pos.left, transform:"rotate(0deg) rotateY(0deg)"});
         pos.stack.append(shufflingCard);
         shufflingCard.show();
         var shakeTime = 1000;
