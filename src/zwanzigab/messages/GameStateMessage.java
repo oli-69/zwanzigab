@@ -30,11 +30,11 @@ public class GameStateMessage {
     public int roundCounter;
     public String gameWinner;
 
-    public GameStateMessage(String phase, List<Player> players, List<Player> attendees, Player mover, Player dealer, Player gameWinner,
+    public GameStateMessage(String phase, List<Player> players, List<Player> attendees, Player mover, Player activeAdmin, Player dealer, Player gameWinner,
             GameStack gameStack, int stackStarterId, Map<Integer, List<Card>> stackMap, Trump trump, boolean canSkip,
             Integer[] allowedMoves, int roundCounter, boolean webradioPlaying, WebradioUrl radioUrl) {
         this.phase = phase;
-        this.playerList = new PlayerList(players);
+        this.playerList = new PlayerList(players, activeAdmin);
         this.attendeeList = new AttendeeList(attendees, mover);
         this.mover = mover != null ? mover.getName() : "";
         this.dealer = dealer != null ? dealer.getName() : "";

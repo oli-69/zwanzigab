@@ -215,11 +215,21 @@ main {
     margin:0.3em;
 }
 
-#helpButton:hover{
+#adminButton{
+    background-image: url("Settings-icon24.png");
+    position: fixed;
+    top:0px;
+    left:0px;
+    width: 24px;
+    height: 24px;
+    margin:0.3em;
+}
+
+#helpButton:hover, #adminButton:hover{
     cursor: pointer;
 }
 
-#helpWindow {
+#helpWindow, #adminWindow {
     position:fixed;
     left: 10%;
     right: 10%;
@@ -237,18 +247,18 @@ main {
 h1, h2, h3 {
     color: rgb(220, 255, 0);
 }
-#helpWindowContent{
+#helpWindowContent, #adminWindowContent{
     flex-grow: 1.0;
     color: white;
     padding: 0.5em;
     padding-left:1em;
     margin:0.2em;
     padding-right:1em;
-    text-align: justify;
+    text-align: center;
     overflow-y: scroll;
 }
 
-#helpWindowBtnPanel{
+#helpWindowBtnPanel, #adminWindowBtnPanel{
     background-color: rgba(0,0,0,1);
     display: flex;
     justify-content: center;
@@ -267,7 +277,7 @@ h1, h2, h3 {
 
 .playerOffline {
     color: darkgray;
-    margin-left: 0.5em;
+    margin-left: 0.1em;
     margin-right: 0.5em;
     margin-top: 0.1em;
     margin-bottom: 0.1em;
@@ -276,7 +286,7 @@ h1, h2, h3 {
 
 .playerOnline {
     color: white;
-    margin-left: 0.5em;
+    margin-left: 0.1em;
     margin-right: 0.5em;
     margin-top: 0.1em;
     margin-bottom: 0.1em;
@@ -504,14 +514,16 @@ h1, h2, h3 {
         font-size: 0.9em;
     }
 
-    #helpWindow {
-        left: 25%;
-        right: 25%;
-    }
-
-    #helpWindow {
+    #helpWindow, #adminWindow {
         left: 20%;
         right: 20%;
+    }
+
+    #adminButton{
+        background-image: url("Settings-icon32.png");
+        width: 32px;
+        height: 32px;
+        margin:0.2em;
     }
 
     #helpButton{
@@ -629,7 +641,7 @@ h1, h2, h3 {
         font-size: 1em;
     }
 
-    #helpWindow {
+    #helpWindow, #adminWindow {
         left: 25%;
         right: 25%;
     }

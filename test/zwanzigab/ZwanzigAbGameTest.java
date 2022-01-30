@@ -2,6 +2,7 @@ package zwanzigab;
 
 import cardgame.Card;
 import cardgame.messages.LoginSuccess;
+import cardgame.messages.WebradioUrl;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import org.apache.logging.log4j.core.config.DefaultConfiguration;
 import org.eclipse.jetty.websocket.api.Session;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,11 +59,14 @@ public class ZwanzigAbGameTest {
     private final String name3 = "Player 3";
     private final String name4 = "Player 4";
     private final String name5 = "Player 5";
+    private final List<String> adminNames = new ArrayList<>();
     private final Gson gson = new Gson();
 
     @Before
     public void setUp() {
-        game = new ZwanzigAbGame(Collections.synchronizedList(new ArrayList<>()), "", new CardDealServiceImpl(), new ArrayList<>());
+        adminNames.add(name1);
+        adminNames.add(name2);
+        game = new ZwanzigAbGame(Collections.synchronizedList(new ArrayList<>()), "", new CardDealServiceImpl(), new ArrayList<>(), adminNames);
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);
@@ -85,6 +90,73 @@ public class ZwanzigAbGameTest {
     }
 
     @Test
+    public void testPlayerCommand() {
+        login(player1);
+        login(player2);
+        login(player3);
+
+        // when (P2 isn't admin)
+        socket2.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+
+        // wrong command
+        socket1.onText("{\"action\": \"command\", \"command\": \"xyzddskfhh\"}");
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+        
+        // start game
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        assertEquals(GAMEPHASE.shuffle, game.getGamePhase());
+        
+        // start again
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        // -> see log
+        assertEquals(GAMEPHASE.shuffle, game.getGamePhase());
+        
+        // stop game
+        socket1.onText("{\"action\": \"command\", \"command\": \"stop\"}");
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+        
+        // stop game again
+        socket1.onText("{\"action\": \"command\", \"command\": \"stop\"}");
+        // -> see log
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+
+        // shuffle players
+        socket1.onText("{\"action\": \"command\", \"command\": \"shufflePlayers\"}");
+        // -> see log
+
+        // try to shuffle players in running game
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        socket1.onText("{\"action\": \"command\", \"command\": \"shufflePlayers\"}");
+        // -> see log
+    }
+
+    @Test
+    public void testActiveAdmin() {
+        assertNull(game.getActiveAdmin());
+        
+        // when / then (start game)
+        login(player1);
+        login(player2);
+        login(player3);
+        login(player4);
+        assertEquals(player1, game.getActiveAdmin());
+        
+        // when (player 1 logout)
+        game.removePlayerFromRoom(player1);
+        assertEquals(player2, game.getActiveAdmin());
+        
+        // when (player 1 lo in again)
+        login(player1);
+        assertEquals(player1, game.getActiveAdmin());
+        
+        // when (player 1 and 2 logout)
+        game.removePlayerFromRoom(player1);
+        game.removePlayerFromRoom(player2);
+        assertNull(game.getActiveAdmin());
+    }
+
+    @Test
     public void testStackWinner() {
         int trump = Card.HERZ;
         startWith2Players();
@@ -102,9 +174,9 @@ public class ZwanzigAbGameTest {
         // when
         socket2.onText("{\"action\": \"move\", \"cardID\": 0}");
         socket1.onText("{\"action\": \"move\", \"cardID\": 0}");
-        
+
         // then
-        StackResult result = gson.fromJson( socket1.getMessage("stackResult"), StackResult.class );
+        StackResult result = gson.fromJson(socket1.getMessage("stackResult"), StackResult.class);
         assertEquals("stack winner id", 1, result.stackWinnerId); // player2 must hade made it
     }
 
@@ -367,7 +439,7 @@ public class ZwanzigAbGameTest {
 
     private void login(ZwanzigAbPlayer player) {
         game.addPlayerToRoom(player);
-        player.getSocket().sendString(gson.toJson(new LoginSuccess("roomName")));
+        player.getSocket().sendString(gson.toJson(new LoginSuccess("roomName", new ArrayList<WebradioUrl>())));
         player.getSocket().sendString(game.getGameState(player));
     }
 
@@ -447,7 +519,7 @@ public class ZwanzigAbGameTest {
 
         public String getMessage(String action) {
             ListIterator<String> listIterator = messageBuff.listIterator(messageBuff.size());
-            while(listIterator.hasPrevious()) {
+            while (listIterator.hasPrevious()) {
                 String message = listIterator.previous();
                 if (message.contains("\"action\":\"" + action + "\"")) {
                     return message;

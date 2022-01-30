@@ -4,6 +4,7 @@ var trump;
 var players; // list of all players in the room
 var attendees; // list of players currently in game
 var mover;
+var admin;
 var dealer;
 var attendeeStacks = [];
 var gameStack;
@@ -26,6 +27,8 @@ var roundInfo;
 var roundCounter;
 var gameWinner;
 var helpWindow;
+var adminWindow;
+var radioList = [];
 
 function onDocumentReady() {
     $("#loginConsole").text("Anmeldung vorbereiten...");
@@ -40,6 +43,8 @@ function onDocumentReady() {
     scoreboard = $("#scoreboard");
     helpWindow = $("#helpWindow");
     helpWindow.hide();
+    adminWindow = $("#adminWindow");
+    adminWindow.hide();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#heartBlindDialog"), false);
@@ -99,6 +104,7 @@ function onGameState(message) {
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
     mover = message.attendeeList.mover;
+    admin = message.playerList.admin;
     dealer = message.dealer;
     trump = message.trump;
     canSkip = message.canSkip;
@@ -115,6 +121,7 @@ function onGameState(message) {
     updateAttendeeStacks();
     onGamePhase(gamePhase);
     setWebRadioUrl(message.radioUrl.url);
+    updateRadioList(message.radioUrl.url);
     if (!webradioStateLoaded) {
         setWebRadioPlaying(message.webradioPlaying);
         webradioStateLoaded = true;
@@ -194,6 +201,7 @@ function onGamePhase(phase) {
     updateGameStack();
     updateAttendeeStacks();
     updateAttendeeDeskColor();
+    updateAdminWindow();
 
     // Control Panel
     if (meIsMover && (isBuy || isWaitForPlayerMove)) {
@@ -240,10 +248,24 @@ function initDialogButtons() {
     }
 }
 
+function onRadioListChanged(list) {
+    log("process onRadioListChanged");
+    radioList = list;
+    var adminRadioBox = $("#cfgRadioList");
+    var id = 0;
+    adminRadioBox.empty();
+    radioList.forEach(function (radioUrl) {
+        $("<option/>").val(id++).text(radioUrl.name).appendTo(adminRadioBox);
+    });
+    updateRadioList(radioUrl)
+}
+
 function onPlayerList(message) {
     messageInProgress = false;
     players = message.players;
+    admin = message.admin;
     updatePlayerList();
+    updateAdminWindow();
 }
 
 function onPlayerOnline(message) {
@@ -253,7 +275,9 @@ function onPlayerOnline(message) {
             player.online = message.online;
         }
     });
+    admin = message.admin;
     updatePlayerList();
+    updateAdminWindow();
     if (message.online) {
         sound.online.play();
     } else {
@@ -284,6 +308,7 @@ function onAttendeeList(message) {
     $("#removeFromAttendeesBtn").prop("disabled", (myId < 0));
     updateAttendeeList();
     initDialogButtons();
+    updateAdminWindow();
 }
 
 function onAttendeeStacks(message) {
@@ -499,8 +524,10 @@ function updatePlayerList() {
     panel.empty();
     players.forEach(function (player) {
         var className = player.online ? "playerOnline" : "playerOffline";
+        var admnImg = (admin === player.name) ? "dot-blue-8.png" : "dot-empty-8.png";
         var tokens = (0.1 * player.totalTokens).toFixed(2);
         var container = $("<div class='" + className + "'></div>");
+        container.append($("<img src='" + admnImg + "' border=0>"));
         container.append(player.name);
         container.append("<br>&euro; " + tokens);
         panel.append(container);
@@ -715,6 +742,28 @@ function getTallymarks(value) {
     return value > 0 ? "&#" + (96 + value) + ";" : "";
 }
 
+function updateRadioList(radioUrl) {
+    var adminRadioBox = $("#cfgRadioList");
+    adminRadioBox.removeAttr('selected');
+    for (var id = 0; id < radioList.length; id++) {
+        if (radioUrl === radioList[id].url) {
+            adminRadioBox.val(id);
+            break;
+        }
+    }
+}
+
+function updateAdminWindow() {
+    var isAdmin = (myName === admin);
+    var isRunning = (gamePhase != "waitForAttendees");
+    var isMinAttendees = (attendees.length > 1);
+    $("#cfgStartGameBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
+    $("#cfgStopGameBtn").prop("disabled", !(isAdmin && isRunning));
+    $("#cfgShufflePlayersBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
+    $("#cfgRadioList").prop("disabled", !(isAdmin));
+}
+
+
 /* ---------------------------------------------------------------------------*/
 
 
@@ -754,7 +803,7 @@ function setShuffling(isShuffling) {
         sound.shuffle.play();
         $("body").prepend(shufflingCard);
         var pos = getShuffleCardsPosition(shufflingCard);
-        shufflingCard.css({position: "fixed", top: pos.top, left: pos.left, transform:"rotate(0deg) rotateY(0deg)"});
+        shufflingCard.css({position: "fixed", top: pos.top, left: pos.left, transform: "rotate(0deg) rotateY(0deg)"});
         pos.stack.append(shufflingCard);
         shufflingCard.show();
         var shakeTime = 1000;
@@ -1214,6 +1263,14 @@ function onOpenHelp() {
 
 function onCloseHelp() {
     helpWindow.slideUp(500);
+}
+
+function onOpenAdminWindow() {
+    adminWindow.slideDown(500);
+}
+
+function onCloseAdminWindow() {
+    adminWindow.slideUp(500);
 }
 
 function processCardHover(uiCard, isHover) {

@@ -58,7 +58,7 @@ public class ZwanzigAbServer extends GameServer {
         LOGGER.info("using port " + port);
         String confName = settings.getProperty("jitsiConference");
         LOGGER.info("using conference name '" + confName + "'");
-        ZwanzigAbGame game = new ZwanzigAbGame(confName, getWebradioList(settings));
+        ZwanzigAbGame game = new ZwanzigAbGame(confName, getWebradioList(settings), getAdminNames(settings));
         Server httpServer = new Server(port);
 
         ServletContextHandler context = new ServletContextHandler();

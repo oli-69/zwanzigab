@@ -40,6 +40,7 @@
                 <div id="attendeesPanel"></div>
                 <div id="gameDesk"><div id="gameStack" class="cardStack"></div></div>
                 <div id="playerListPanel"></div>
+                <div id="adminButton" onclick="onOpenAdminWindow()"></div>
                 <div id="helpButton" onclick="onOpenHelp()"></div>
                 <div id="roundInfo">
                     <div class="roundInfoItem">Runde:<div id="roundCounter">1</div></div>
@@ -153,6 +154,25 @@
                         <input type="button" value="Schlie&szlig;en" id="closeHelpButton" onclick="onCloseHelp()">
                     </div>
                 </div>                
+                <div id="adminWindow">
+                    <div id="adminWindowContent">
+                        <div style="text-align:center"><h1>Spieleinstellungen</h1></div>
+                        <table style="margin-left: auto; margin-right: auto; table-layout: fixed; border-collapse: collapse;">
+                            <tr><td><button style="width:100%;" id="cfgStartGameBtn" onclick="onCfgStartGameBtn()" disabled />Start Game</button></td></tr>
+                            <tr><td><button style="width:100%;" id="cfgStopGameBtn" onclick="onCfgStopGameBtn()" disabled />Stop Game</button></td></tr>
+                            <tr><td><button style="width:100%;" id="cfgShufflePlayersBtn" onclick="onCfgShufflePlayersBtn()" disabled />Spieler umsetzen</button></td></tr>
+                            <tr><td><select style="width:100%; margin-left:0px; margin-right:0px;" id="cfgRadioList" onchange="onCfgChangeWebRadio()">
+                                        <option value="0">Seefunk</option>
+                                        <option value="1">SAW 80er</option>
+                                    </select>
+                                </td></tr>
+                        </table>
+                        <br>
+                    </div>
+                    <div id="adminWindowBtnPanel">
+                        <input type="button" value="Schlie&szlig;en" id="closeAdminButton" onclick="onCloseAdminWindow()">
+                    </div>
+                </div>        
             </div>
 
             <div id="loginPage">
@@ -190,7 +210,7 @@
         <script>
             $(document).ready(function () {
                 onDocumentReady();
-                
+
 //                $("#pName").val((navigator.userAgent.indexOf("Firefox") > -1) ? "testUser2" : "testUser");
 //                $("#pPwd").val("123456");
 //                login();

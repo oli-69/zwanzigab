@@ -1,5 +1,4 @@
 var webSocket;
-var isOnline = false;
 var fadePanelSpeed = 500;
 var messageBuffer = [];
 var videoWindow;
@@ -98,8 +97,8 @@ function onLoginSuccess(message) {
         window.location = getVideoUrl();
     } else {
         // start gaming
+        onRadioListChanged(message.radioList)
         setLoginPageVisible(false);
-        isOnline = true;
     }
 }
 
@@ -144,6 +143,7 @@ function onServerMessage(data) {
             break;
         case "radioUrl":
             setWebRadioUrl(message.url);
+            updateRadioList(message.url);
             break;
         case "loginSuccess":
             onLoginSuccess(message);
@@ -266,7 +266,6 @@ function connect() {
         webSocket = undefined;
         $("#connectBtn").prop("disabled", false);
         $("#logoffBtn").prop("disabled", true);
-        isOnline = false;
         setLoginPageVisible(true);
     };
 }
@@ -277,7 +276,7 @@ function closeSocket() {
 
 
 function log(text) {
-    if (!true) {
+    if (true) {
         console.log(text);
     }
 }

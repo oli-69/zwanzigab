@@ -99,7 +99,7 @@ public class ZwanzigAbGame extends CardGame {
      * Default Constructor. Creates an instance of this class.
      */
     public ZwanzigAbGame() {
-        this("", new ArrayList<>());
+        this("", new ArrayList<>(), new ArrayList<>());
     }
 
     /**
@@ -108,15 +108,15 @@ public class ZwanzigAbGame extends CardGame {
      * @param conferenceName the room name for the jitsi conference
      * @param webradioList list of known webradios
      */
-    public ZwanzigAbGame(String conferenceName, List<WebradioUrl> webradioList) {
-        this(Collections.synchronizedList(new ArrayList<>()), conferenceName, new CardDealServiceImpl(), webradioList);
+    public ZwanzigAbGame(String conferenceName, List<WebradioUrl> webradioList, List<String> adminNames) {
+        this(Collections.synchronizedList(new ArrayList<>()), conferenceName, new CardDealServiceImpl(), webradioList, adminNames);
     }
 
     /**
      * Package protected constructor. Required for unit testing.
      */
-    ZwanzigAbGame(List<Card> gameStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
-        super(CARDS_32, conferenceName, webradioList);
+    ZwanzigAbGame(List<Card> gameStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList, List<String> adminNames) {
+        super(CARDS_32, conferenceName, webradioList, adminNames);
         this.cardDealService = cardDealService;
         this.cardComparator = new CardComparator(CardComparator.TYPE.DESCENDING);
         this.gameStackProperties = new GameStackProperties(gameStack, 0, 10, 10, 7);
@@ -256,7 +256,7 @@ public class ZwanzigAbGame extends CardGame {
      * @return the game state for this player in JSON format
      */
     private GameStateMessage getGameStateMessage(Player player) {
-        return new GameStateMessage(gamePhase.name(), players, attendees, mover, round.dealer, gameWinner,
+        return new GameStateMessage(gamePhase.name(), players, attendees, mover, activeAdmin, round.dealer, gameWinner,
                 gameStackProperties.getGameStack(), getAttendeeID(round.stackStarter), getAttendeeStackMap(player),
                 round.trump, canSkip(player), getAllowedMoves(player), round.roundCounter,
                 isWebradioPlaying(), getRadioUrl());
@@ -305,6 +305,9 @@ public class ZwanzigAbGame extends CardGame {
                 break;
             case "chat":
                 chat(message.jsonObject.get("text").getAsString(), player);
+                break;
+            case "command":
+                processPlayerCommand(player, message);
                 break;
             default:
                 LOGGER.warn("Unknown message from player '" + player.getName() + "': '" + message.jsonString);
@@ -481,6 +484,40 @@ public class ZwanzigAbGame extends CardGame {
             } else {
                 LOGGER.warn("'" + player + "' is not an attendee!");
             }
+        }
+    }
+
+    private void processPlayerCommand(Player player, SocketMessage message) {
+        if (player.equals(activeAdmin)) {
+            String command = message.jsonObject.get("command").getAsString();
+            switch (command) {
+                case "start":
+                    if (gamePhase == GAMEPHASE.waitForAttendees) {
+                        startGame();
+                    } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                case "stop":
+                     if (gamePhase != GAMEPHASE.waitForAttendees) {
+                         stopGame();
+                     } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s == %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                case "shufflePlayers":
+                     if (gamePhase == GAMEPHASE.waitForAttendees) {
+                         shufflePlayers();
+                     } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                default:
+                    LOGGER.warn("Spieler '" + player.getName() + "' " + " unbekanntes Kommando: " + command);
+                    break;
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht Admin!");
         }
     }
 
