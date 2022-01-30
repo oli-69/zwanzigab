@@ -80,8 +80,10 @@ public class ZwanzigAbGamePanel extends GamePanel {
             case CardGame.PROP_ATTENDEESLIST:
                 playerList.repaint();
                 checkAttendeesCount();
+                break;
             case CardGame.PROP_WEBRADIO_URL:
                 cbRadio.setSelectedItem(game.getRadioUrl());
+                break;
             default:
                 break;
         }

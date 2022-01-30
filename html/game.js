@@ -756,7 +756,7 @@ function updateRadioList(radioUrl) {
 function updateAdminWindow() {
     var isAdmin = (myName === admin);
     var isRunning = (gamePhase != "waitForAttendees");
-    var isMinAttendees = (attendees.length > 1);
+    var isMinAttendees = (attendees != undefined && attendees.length > 1);
     $("#cfgStartGameBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
     $("#cfgStopGameBtn").prop("disabled", !(isAdmin && isRunning));
     $("#cfgShufflePlayersBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
