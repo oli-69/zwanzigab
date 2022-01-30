@@ -512,6 +512,14 @@ public class ZwanzigAbGame extends CardGame {
                         LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
                     }
                     break;
+                case "changeWebradio":
+                    int id = message.jsonObject.get("id").getAsInt();
+                    try {
+                        setRadioUrl(getRadioList().get(id));
+                    } catch (Exception e) {
+                        LOGGER.warn("Unable to select radio id " + id, e);
+                    }
+                    break;
                 default:
                     LOGGER.warn("Spieler '" + player.getName() + "' " + " unbekanntes Kommando: " + command);
                     break;

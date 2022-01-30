@@ -761,6 +761,14 @@ function updateAdminWindow() {
     $("#cfgStopGameBtn").prop("disabled", !(isAdmin && isRunning));
     $("#cfgShufflePlayersBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
     $("#cfgRadioList").prop("disabled", !(isAdmin));
+    if (!isAdmin) {
+        $("#adminButton").hide();
+        if (adminWindow.is(':visible')) {
+            onCloseAdminWindow();
+        }
+    } else {
+        $("#adminButton").show();
+    }
 }
 
 
@@ -1266,7 +1274,9 @@ function onCloseHelp() {
 }
 
 function onOpenAdminWindow() {
-    adminWindow.slideDown(500);
+    if (myName === admin) {
+        adminWindow.slideDown(500);
+    }
 }
 
 function onCloseAdminWindow() {
@@ -1411,4 +1421,34 @@ function onPlayerMove() {
 function onConfirmGameOver() {
     var msg = {"action": "confirmGameOver"};
     webSocket.send(JSON.stringify(msg));
+}
+
+function onCfgChangeWebRadio() {
+    if (myName === admin) {
+        var msg = {"action": "command", "command": "changeWebradio", "id": $("#cfgRadioList").val()};
+        webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onCfgStartGameBtn() {
+    if (myName === admin) {
+        var msg = {"action": "command", "command": "start"};
+        webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onCfgStopGameBtn() {
+    if (myName === admin) {
+        if (window.confirm("Soll das Spiel abgebrochen werden?")) {
+            var msg = {"action": "command", "command": "stop"};
+        }
+        webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onCfgShufflePlayersBtn() {
+    if (myName === admin) {
+        var msg = {"action": "command", "command": "shufflePlayers"};
+        webSocket.send(JSON.stringify(msg));
+    }
 }
